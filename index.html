@@ -212,9 +212,14 @@
     const klant = new URLSearchParams(window.location.search).get('klant') || 'demo'
     let geschiedenis = []
     let bedrijfsnaam = 'Assistent'
+    const chatEl = document.getElementById('chat')
 
     function nu() {
       return new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' })
+    }
+
+    function scrollNaarOnder() {
+      chatEl.scrollTop = chatEl.scrollHeight
     }
 
     function voegToeAanChat(rol, tekst) {
@@ -231,8 +236,8 @@
 
       wrapper.appendChild(bubble)
       wrapper.appendChild(ts)
-      document.getElementById('chat').appendChild(wrapper)
-      document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight
+      chatEl.appendChild(wrapper)
+      scrollNaarOnder()
     }
 
     function toonTypingIndicator() {
@@ -245,8 +250,8 @@
       bubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>'
 
       wrapper.appendChild(bubble)
-      document.getElementById('chat').appendChild(wrapper)
-      document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight
+      chatEl.appendChild(wrapper)
+      scrollNaarOnder()
     }
 
     function verwijderTypingIndicator() {
@@ -258,6 +263,29 @@
       document.getElementById('bericht').disabled = bezig
       document.getElementById('verstuur').disabled = bezig
       if (!bezig) document.getElementById('bericht').focus()
+    }
+
+    // Maakt een lege bot-bubble aan die progressief gevuld wordt.
+    // Geeft { bubble, finaliseer } terug.
+    function maakStreamBubble() {
+      const wrapper = document.createElement('div')
+      wrapper.className = 'bericht-wrapper bot'
+
+      const bubble = document.createElement('div')
+      bubble.className = 'bubble'
+
+      wrapper.appendChild(bubble)
+      chatEl.appendChild(wrapper)
+
+      return {
+        bubble,
+        finaliseer() {
+          const ts = document.createElement('span')
+          ts.className = 'timestamp'
+          ts.textContent = nu()
+          wrapper.appendChild(ts)
+        }
+      }
     }
 
     async function laadConfig() {
@@ -286,16 +314,51 @@
       setBezig(true)
       toonTypingIndicator()
 
+      let streamBubble = null
+      let volledigAntwoord = ''
+
       try {
         const res = await fetch('/.netlify/functions/vraag-claude', {
           method: 'POST',
           body: JSON.stringify({ geschiedenis, klant })
         })
-        const data = await res.json()
-        verwijderTypingIndicator()
-        voegToeAanChat('bot', data.antwoord || data.fout || 'Er ging iets mis.')
-        if (data.antwoord) {
-          geschiedenis.push({ role: 'assistant', content: data.antwoord })
+
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop()
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            let event
+            try { event = JSON.parse(line.slice(6)) } catch { continue }
+
+            if (event.type === 'text') {
+              if (!streamBubble) {
+                // Eerste chunk: verwijder typing indicator, maak stream-bubble aan
+                verwijderTypingIndicator()
+                streamBubble = maakStreamBubble()
+              }
+              streamBubble.bubble.textContent += event.delta
+              volledigAntwoord += event.delta
+              scrollNaarOnder()
+            } else if (event.type === 'done') {
+              if (streamBubble) streamBubble.finaliseer()
+              if (volledigAntwoord) {
+                geschiedenis.push({ role: 'assistant', content: volledigAntwoord })
+              }
+            } else if (event.type === 'error') {
+              verwijderTypingIndicator()
+              voegToeAanChat('bot', event.fout || 'Er ging iets mis.')
+            }
+          }
         }
       } catch (e) {
         verwijderTypingIndicator()

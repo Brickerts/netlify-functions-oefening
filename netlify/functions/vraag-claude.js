@@ -1,12 +1,13 @@
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 function laadConfig(klant) {
   const veiligNaam = (klant || 'demo').replace(/[^a-z0-9-_]/gi, '')
   const bestandspad = path.resolve(__dirname, `../../configs/${veiligNaam}.json`)
-  if (!fs.existsSync(bestandspad)) {
-    return null
-  }
+  if (!fs.existsSync(bestandspad)) return null
   return JSON.parse(fs.readFileSync(bestandspad, 'utf8'))
 }
 
@@ -81,99 +82,140 @@ function apiHeaders() {
   }
 }
 
-exports.handler = async (event) => {
-  try {
-    const { geschiedenis, klant } = JSON.parse(event.body)
+// Parses Anthropic's SSE stream. Calls onTextDelta for each text chunk.
+// Returns the full array of content blocks (needed for tool_use follow-up).
+async function parseAnthropicStream(response, onTextDelta) {
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  const contentBlocks = []
+  let currentToolInputJson = ''
 
-    const config = laadConfig(klant)
-    if (!config) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ fout: `Onbekende klant: ${klant}` })
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop()
+
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const raw = line.slice(6)
+      if (raw === '[DONE]') continue
+
+      let event
+      try { event = JSON.parse(raw) } catch { continue }
+
+      if (event.type === 'content_block_start') {
+        contentBlocks[event.index] = { ...event.content_block }
+        if (event.content_block.type === 'tool_use') currentToolInputJson = ''
+      } else if (event.type === 'content_block_delta') {
+        if (event.delta.type === 'text_delta') {
+          onTextDelta(event.delta.text)
+          if (contentBlocks[event.index]) {
+            contentBlocks[event.index].text =
+              (contentBlocks[event.index].text || '') + event.delta.text
+          }
+        } else if (event.delta.type === 'input_json_delta') {
+          currentToolInputJson += event.delta.partial_json
+        }
+      } else if (event.type === 'content_block_stop') {
+        if (contentBlocks[event.index]?.type === 'tool_use') {
+          try { contentBlocks[event.index].input = JSON.parse(currentToolInputJson) }
+          catch { contentBlocks[event.index].input = {} }
+        }
       }
-    }
-
-    const tools = bouwTools(config)
-
-    const requestBody = {
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
-      system: bouwSystemPrompt(config),
-      messages: geschiedenis
-    }
-
-    if (tools.length > 0) {
-      requestBody.tools = tools
-    }
-
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: apiHeaders(),
-      body: JSON.stringify(requestBody)
-    })
-
-    const data = await response.json()
-
-    if (!data.content) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ fout: data.error?.message })
-      }
-    }
-
-    const toolUseBlok = data.content.find(b => b.type === 'tool_use')
-
-    if (toolUseBlok && toolUseBlok.name === 'plaas_bestelling') {
-      const { items, aantal } = toolUseBlok.input
-
-      const bestellingOmschrijving = items
-        .map((item, i) => `${aantal[i]}x ${item}`)
-        .join(', ')
-
-      const vervolg = await fetch(API_URL, {
-        method: 'POST',
-        headers: apiHeaders(),
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 500,
-          system: bouwSystemPrompt(config),
-          tools,
-          messages: [
-            ...geschiedenis,
-            { role: 'assistant', content: data.content },
-            {
-              role: 'user',
-              content: [{
-                type: 'tool_result',
-                tool_use_id: toolUseBlok.id,
-                content: `Bestelling succesvol geplaatst: ${bestellingOmschrijving}`
-              }]
-            }
-          ]
-        })
-      })
-
-      const vervolgData = await vervolg.json()
-      const tekstBlok = vervolgData.content?.find(b => b.type === 'text')
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          antwoord: tekstBlok?.text || 'Bestelling verwerkt.',
-          bestelling: { items, aantal }
-        })
-      }
-    }
-
-    const tekstBlok = data.content.find(b => b.type === 'text')
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ antwoord: tekstBlok?.text || '' })
-    }
-  } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ fout: err.message })
     }
   }
+
+  return contentBlocks
+}
+
+export default async (request) => {
+  const { geschiedenis, klant } = await request.json()
+
+  const config = laadConfig(klant)
+  if (!config) {
+    return new Response(
+      JSON.stringify({ fout: `Onbekende klant: ${klant}` }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+
+  const tools = bouwTools(config)
+  const encoder = new TextEncoder()
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (data) =>
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
+
+      try {
+        // ── Eerste call (mogelijk met tool use) ──────────────────────────
+        const res1 = await fetch(API_URL, {
+          method: 'POST',
+          headers: apiHeaders(),
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 500,
+            system: bouwSystemPrompt(config),
+            messages: geschiedenis,
+            ...(tools.length > 0 ? { tools } : {}),
+            stream: true
+          })
+        })
+
+        const blocks = await parseAnthropicStream(res1, delta => send({ type: 'text', delta }))
+        const toolBlock = blocks.find(b => b.type === 'tool_use')
+
+        if (toolBlock?.name === 'plaas_bestelling') {
+          // Tool use: typingindicator blijft zichtbaar totdat res2 tekst stuurt
+          const { items, aantal } = toolBlock.input
+          const omschrijving = items.map((item, i) => `${aantal[i]}x ${item}`).join(', ')
+
+          const res2 = await fetch(API_URL, {
+            method: 'POST',
+            headers: apiHeaders(),
+            body: JSON.stringify({
+              model: 'claude-haiku-4-5-20251001',
+              max_tokens: 500,
+              system: bouwSystemPrompt(config),
+              tools,
+              messages: [
+                ...geschiedenis,
+                { role: 'assistant', content: blocks },
+                {
+                  role: 'user',
+                  content: [{
+                    type: 'tool_result',
+                    tool_use_id: toolBlock.id,
+                    content: `Bestelling succesvol geplaatst: ${omschrijving}`
+                  }]
+                }
+              ],
+              stream: true
+            })
+          })
+
+          await parseAnthropicStream(res2, delta => send({ type: 'text', delta }))
+          send({ type: 'done', bestelling: { items, aantal } })
+        } else {
+          send({ type: 'done' })
+        }
+      } catch (err) {
+        send({ type: 'error', fout: err.message })
+      }
+
+      controller.close()
+    }
+  })
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive'
+    }
+  })
 }

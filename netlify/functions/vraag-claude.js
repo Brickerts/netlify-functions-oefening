@@ -10,6 +10,12 @@ function laadConfig(klant) {
   return JSON.parse(fs.readFileSync(bestandspad, 'utf8'))
 }
 
+const TOOL_LABELS = {
+  bestelling: 'bestellingen plaatsen',
+  reservering: 'reserveringen maken',
+  contact: 'contactformulier invullen'
+}
+
 function bouwSystemPrompt(config) {
   const tijden = Object.entries(config.openingstijden)
     .map(([dag, tijd]) => `  - ${dag}: ${tijd}`)
@@ -19,13 +25,23 @@ function bouwSystemPrompt(config) {
     .map(d => `  - ${d}`)
     .join('\n')
 
+  const uitgeschakeld = Object.entries(config.tools)
+    .filter(([, aan]) => !aan)
+    .map(([tool]) => `  - ${TOOL_LABELS[tool] || tool}`)
+    .join('\n')
+
+  const uitgeschakeldBlok = uitgeschakeld
+    ? `\nDe volgende functies zijn UITGESCHAKELD en mag je NOOIT aanbieden, ook niet als de klant erom vraagt:\n${uitgeschakeld}\nAls een klant vraagt naar een uitgeschakelde functie, zeg dan dat dit niet beschikbaar is via de chat.\n`
+    : ''
+
   return `Je bent een vriendelijke assistent voor ${config.bedrijfsnaam}, een ${config.type} bedrijf. ${config.beschrijving} Je helpt klanten met vragen en bestellingen. Spreek altijd Nederlands.
 
 Gebruik ALLEEN de volgende openingstijden, verzin nooit andere tijden:
 ${tijden}
 
 Noem ALLEEN de volgende diensten, verzin nooit andere diensten:
-${diensten}`
+${diensten}
+${uitgeschakeldBlok}`
 }
 
 function bouwTools(config) {

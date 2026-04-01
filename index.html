@@ -303,6 +303,10 @@
       setBezig(false)
     }
 
+    // Stuurt bericht via streaming SSE. Als na STREAM_TIMEOUT ms nog geen
+    // eerste chunk binnenkomt (= Netlify Dev buffert), valt het terug op JSON.
+    const STREAM_TIMEOUT = 2500
+
     async function stuurBericht() {
       const input = document.getElementById('bericht')
       const bericht = input.value.trim()
@@ -314,13 +318,25 @@
       setBezig(true)
       toonTypingIndicator()
 
+      const geslaagd = await probeerStreaming()
+      if (!geslaagd) await fallbackJSON()
+
+      setBezig(false)
+    }
+
+    async function probeerStreaming() {
+      const abortCtrl = new AbortController()
+      const timeoutId = setTimeout(() => abortCtrl.abort(), STREAM_TIMEOUT)
+
       let streamBubble = null
       let volledigAntwoord = ''
+      let eersteChunkOntvangen = false
 
       try {
         const res = await fetch('/.netlify/functions/vraag-claude', {
           method: 'POST',
-          body: JSON.stringify({ geschiedenis, klant })
+          body: JSON.stringify({ geschiedenis, klant, stream: true }),
+          signal: abortCtrl.signal
         })
 
         const reader = res.body.getReader()
@@ -330,6 +346,11 @@
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
+
+          if (!eersteChunkOntvangen) {
+            clearTimeout(timeoutId)
+            eersteChunkOntvangen = true
+          }
 
           buffer += decoder.decode(value, { stream: true })
           const lines = buffer.split('\n')
@@ -342,7 +363,6 @@
 
             if (event.type === 'text') {
               if (!streamBubble) {
-                // Eerste chunk: verwijder typing indicator, maak stream-bubble aan
                 verwijderTypingIndicator()
                 streamBubble = maakStreamBubble()
               }
@@ -360,12 +380,34 @@
             }
           }
         }
+
+        return eersteChunkOntvangen
+      } catch (e) {
+        clearTimeout(timeoutId)
+        // AbortError = timeout zonder chunk = Netlify Dev buffert → fallback
+        if (e.name === 'AbortError') return false
+        verwijderTypingIndicator()
+        voegToeAanChat('bot', 'Verbindingsfout. Probeer het opnieuw.')
+        return true // fout afgehandeld, geen fallback nodig
+      }
+    }
+
+    async function fallbackJSON() {
+      try {
+        const res = await fetch('/.netlify/functions/vraag-claude', {
+          method: 'POST',
+          body: JSON.stringify({ geschiedenis, klant, stream: false })
+        })
+        const data = await res.json()
+        verwijderTypingIndicator()
+        voegToeAanChat('bot', data.antwoord || data.fout || 'Er ging iets mis.')
+        if (data.antwoord) {
+          geschiedenis.push({ role: 'assistant', content: data.antwoord })
+        }
       } catch (e) {
         verwijderTypingIndicator()
         voegToeAanChat('bot', 'Verbindingsfout. Probeer het opnieuw.')
       }
-
-      setBezig(false)
     }
 
     document.getElementById('bericht').addEventListener('keydown', (e) => {

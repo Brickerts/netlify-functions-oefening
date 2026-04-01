@@ -82,8 +82,6 @@ function apiHeaders() {
   }
 }
 
-// Parses Anthropic's SSE stream. Calls onTextDelta for each text chunk.
-// Returns the full array of content blocks (needed for tool_use follow-up).
 async function parseAnthropicStream(response, onTextDelta) {
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
@@ -132,8 +130,64 @@ async function parseAnthropicStream(response, onTextDelta) {
   return contentBlocks
 }
 
+// ── Non-streaming path (fallback voor Netlify Dev / bufferende proxies) ──────
+async function verwerkZonderStream(config, tools, geschiedenis) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: apiHeaders(),
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      system: bouwSystemPrompt(config),
+      messages: geschiedenis,
+      ...(tools.length > 0 ? { tools } : {})
+    })
+  })
+
+  const data = await res.json()
+  if (!data.content) throw new Error(data.error?.message || 'Geen content in response')
+
+  const toolBlock = data.content.find(b => b.type === 'tool_use')
+
+  if (toolBlock?.name === 'plaas_bestelling') {
+    const { items, aantal } = toolBlock.input
+    const omschrijving = items.map((item, i) => `${aantal[i]}x ${item}`).join(', ')
+
+    const res2 = await fetch(API_URL, {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system: bouwSystemPrompt(config),
+        tools,
+        messages: [
+          ...geschiedenis,
+          { role: 'assistant', content: data.content },
+          {
+            role: 'user',
+            content: [{
+              type: 'tool_result',
+              tool_use_id: toolBlock.id,
+              content: `Bestelling succesvol geplaatst: ${omschrijving}`
+            }]
+          }
+        ]
+      })
+    })
+
+    const data2 = await res2.json()
+    const tekst = data2.content?.find(b => b.type === 'text')?.text || 'Bestelling verwerkt.'
+    return { antwoord: tekst, bestelling: { items, aantal } }
+  }
+
+  const tekst = data.content.find(b => b.type === 'text')?.text || ''
+  return { antwoord: tekst }
+}
+
+// ── Handler ──────────────────────────────────────────────────────────────────
 export default async (request) => {
-  const { geschiedenis, klant } = await request.json()
+  const { geschiedenis, klant, stream: wantStream = true } = await request.json()
 
   const config = laadConfig(klant)
   if (!config) {
@@ -144,15 +198,31 @@ export default async (request) => {
   }
 
   const tools = bouwTools(config)
+
+  // ── JSON mode ────────────────────────────────────────────────────────────
+  if (!wantStream) {
+    try {
+      const result = await verwerkZonderStream(config, tools, geschiedenis)
+      return new Response(JSON.stringify(result), {
+        headers: { 'Content-Type': 'application/json' }
+      })
+    } catch (err) {
+      return new Response(JSON.stringify({ fout: err.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+  }
+
+  // ── Streaming mode ───────────────────────────────────────────────────────
   const encoder = new TextEncoder()
 
-  const stream = new ReadableStream({
+  const readableStream = new ReadableStream({
     async start(controller) {
       const send = (data) =>
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
 
       try {
-        // ── Eerste call (mogelijk met tool use) ──────────────────────────
         const res1 = await fetch(API_URL, {
           method: 'POST',
           headers: apiHeaders(),
@@ -170,7 +240,6 @@ export default async (request) => {
         const toolBlock = blocks.find(b => b.type === 'tool_use')
 
         if (toolBlock?.name === 'plaas_bestelling') {
-          // Tool use: typingindicator blijft zichtbaar totdat res2 tekst stuurt
           const { items, aantal } = toolBlock.input
           const omschrijving = items.map((item, i) => `${aantal[i]}x ${item}`).join(', ')
 
@@ -211,7 +280,7 @@ export default async (request) => {
     }
   })
 
-  return new Response(stream, {
+  return new Response(readableStream, {
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',

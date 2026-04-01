@@ -1,11 +1,11 @@
-const fs = require('fs')
-const path = require('path')
+const CONFIG_MAP = {
+  demo:   require('../../configs/demo.json'),
+  kapper: require('../../configs/kapper.json')
+}
 
 function laadConfig(klant) {
   const veiligNaam = (klant || 'demo').replace(/[^a-z0-9-_]/gi, '')
-  const bestandspad = path.resolve(__dirname, `../../configs/${veiligNaam}.json`)
-  if (!fs.existsSync(bestandspad)) return null
-  return JSON.parse(fs.readFileSync(bestandspad, 'utf8'))
+  return CONFIG_MAP[veiligNaam] || null
 }
 
 const TOOL_LABELS = {

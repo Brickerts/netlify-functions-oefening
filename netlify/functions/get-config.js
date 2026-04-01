@@ -1,19 +1,19 @@
-const fs = require('fs')
-const path = require('path')
+const CONFIG_MAP = {
+  demo:   require('../../configs/demo.json'),
+  kapper: require('../../configs/kapper.json')
+}
 
 exports.handler = async (event) => {
   const klant = event.queryStringParameters?.klant || 'demo'
   const veiligNaam = klant.replace(/[^a-z0-9-_]/gi, '')
-  const bestandspad = path.resolve(__dirname, `../../configs/${veiligNaam}.json`)
+  const config = CONFIG_MAP[veiligNaam]
 
-  if (!fs.existsSync(bestandspad)) {
+  if (!config) {
     return {
       statusCode: 404,
       body: JSON.stringify({ fout: `Onbekende klant: ${klant}` })
     }
   }
-
-  const config = JSON.parse(fs.readFileSync(bestandspad, 'utf8'))
 
   return {
     statusCode: 200,

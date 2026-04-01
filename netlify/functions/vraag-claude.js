@@ -1,9 +1,14 @@
 const fs = require('fs')
 const path = require('path')
 
-const config = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../../configs/demo.json'), 'utf8')
-)
+function laadConfig(klant) {
+  const veiligNaam = (klant || 'demo').replace(/[^a-z0-9-_]/gi, '')
+  const bestandspad = path.resolve(__dirname, `../../configs/${veiligNaam}.json`)
+  if (!fs.existsSync(bestandspad)) {
+    return null
+  }
+  return JSON.parse(fs.readFileSync(bestandspad, 'utf8'))
+}
 
 function bouwSystemPrompt(config) {
   const tijden = Object.entries(config.openingstijden)
@@ -23,28 +28,31 @@ Noem ALLEEN de volgende diensten, verzin nooit andere diensten:
 ${diensten}`
 }
 
-const tools = []
-if (config.tools.bestelling) {
-  tools.push({
-    name: 'plaas_bestelling',
-    description: 'Gebruik dit wanneer een klant iets wil bestellen. Extraheer de items en aantallen uit het gesprek.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        items: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Lijst van bestelde items'
+function bouwTools(config) {
+  const tools = []
+  if (config.tools.bestelling) {
+    tools.push({
+      name: 'plaas_bestelling',
+      description: 'Gebruik dit wanneer een klant iets wil bestellen. Extraheer de items en aantallen uit het gesprek.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Lijst van bestelde items'
+          },
+          aantal: {
+            type: 'array',
+            items: { type: 'number' },
+            description: 'Aantal per item, in dezelfde volgorde als items'
+          }
         },
-        aantal: {
-          type: 'array',
-          items: { type: 'number' },
-          description: 'Aantal per item, in dezelfde volgorde als items'
-        }
-      },
-      required: ['items', 'aantal']
-    }
-  })
+        required: ['items', 'aantal']
+      }
+    })
+  }
+  return tools
 }
 
 const API_URL = 'https://api.anthropic.com/v1/messages'
@@ -59,7 +67,17 @@ function apiHeaders() {
 
 exports.handler = async (event) => {
   try {
-    const { geschiedenis } = JSON.parse(event.body)
+    const { geschiedenis, klant } = JSON.parse(event.body)
+
+    const config = laadConfig(klant)
+    if (!config) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ fout: `Onbekende klant: ${klant}` })
+      }
+    }
+
+    const tools = bouwTools(config)
 
     const requestBody = {
       model: 'claude-haiku-4-5-20251001',

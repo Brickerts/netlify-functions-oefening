@@ -1,0 +1,16 @@
+{
+  "bedrijfsnaam": "Stijlvol",
+  "type": "dienstverlening",
+  "beschrijving": "Een gezellige kapsalon in het hart van Alblasserdam voor heren, dames en kinderen.",
+  "openingstijden": {
+    "di-vr": "09:00-18:00",
+    "za": "09:00-16:00",
+    "zo-ma": "gesloten"
+  },
+  "diensten": ["knippen heren", "knippen dames", "baard trimmen", "kinderen knippen"],
+  "tools": {
+    "bestelling": false,
+    "reservering": false,
+    "contact": true
+  }
+}

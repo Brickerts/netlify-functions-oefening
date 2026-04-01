@@ -6,12 +6,21 @@ const config = JSON.parse(
 )
 
 function bouwSystemPrompt(config) {
-  const diensten = config.diensten.join(', ')
   const tijden = Object.entries(config.openingstijden)
-    .map(([dag, tijd]) => `${dag}: ${tijd}`)
-    .join(', ')
+    .map(([dag, tijd]) => `  - ${dag}: ${tijd}`)
+    .join('\n')
 
-  return `Je bent een vriendelijke assistent voor ${config.bedrijfsnaam}, een ${config.type} bedrijf. ${config.beschrijving} Je helpt klanten met vragen en bestellingen. Openingstijden: ${tijden}. Beschikbare diensten: ${diensten}. Spreek altijd Nederlands.`
+  const diensten = config.diensten
+    .map(d => `  - ${d}`)
+    .join('\n')
+
+  return `Je bent een vriendelijke assistent voor ${config.bedrijfsnaam}, een ${config.type} bedrijf. ${config.beschrijving} Je helpt klanten met vragen en bestellingen. Spreek altijd Nederlands.
+
+Gebruik ALLEEN de volgende openingstijden, verzin nooit andere tijden:
+${tijden}
+
+Noem ALLEEN de volgende diensten, verzin nooit andere diensten:
+${diensten}`
 }
 
 const tools = []

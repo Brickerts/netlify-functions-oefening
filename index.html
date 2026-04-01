@@ -1,13 +1,25 @@
 <!DOCTYPE html>
 <html>
+<head>
+  <title>Chatbot</title>
+</head>
 <body>
-  <h2>Brasa Bestelling</h2>
+  <h2 id="titel">Chatbot</h2>
   <div id="chat" style="border:1px solid #ccc; padding:10px; height:300px; overflow-y:auto; margin-bottom:10px;"></div>
   <input id="bericht" placeholder="Typ je bericht..." style="width:400px">
   <button onclick="stuurBericht()">Verstuur</button>
 
   <script>
     let geschiedenis = []
+    let bedrijfsnaam = 'Assistent'
+
+    async function laadConfig() {
+      const res = await fetch('/.netlify/functions/get-config')
+      const config = await res.json()
+      bedrijfsnaam = config.bedrijfsnaam
+      document.getElementById('titel').textContent = bedrijfsnaam
+      document.title = bedrijfsnaam
+    }
 
     async function stuurBericht() {
       const bericht = document.getElementById('bericht').value
@@ -23,7 +35,7 @@
       })
 
       const data = await res.json()
-      voegToeAanChat('Brasa', data.antwoord)
+      voegToeAanChat(bedrijfsnaam, data.antwoord)
       geschiedenis.push({ role: 'assistant', content: data.antwoord })
     }
 
@@ -32,6 +44,8 @@
       chat.innerHTML += `<p><strong>${naam}:</strong> ${tekst}</p>`
       chat.scrollTop = chat.scrollHeight
     }
+
+    laadConfig()
   </script>
 </body>
 </html>

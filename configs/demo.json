@@ -1,0 +1,15 @@
+{
+  "bedrijfsnaam": "Demo Café",
+  "type": "horeca",
+  "beschrijving": "Een gezellig buurtcafé met huisgemaakte gerechten en verse koffie.",
+  "openingstijden": {
+    "ma-vr": "08:00-22:00",
+    "za-zo": "09:00-23:00"
+  },
+  "diensten": ["koffie", "lunch", "diner", "afhaal"],
+  "tools": {
+    "bestelling": true,
+    "reservering": false,
+    "contact": true
+  }
+}

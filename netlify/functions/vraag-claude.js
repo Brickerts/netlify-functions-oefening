@@ -1,8 +1,5 @@
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const fs = require('fs')
+const path = require('path')
 
 function laadConfig(klant) {
   const veiligNaam = (klant || 'demo').replace(/[^a-z0-9-_]/gi, '')
@@ -82,209 +79,89 @@ function apiHeaders() {
   }
 }
 
-async function parseAnthropicStream(response, onTextDelta) {
-  const reader = response.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
-  const contentBlocks = []
-  let currentToolInputJson = ''
+exports.handler = async (event) => {
+  try {
+    const { geschiedenis, klant } = JSON.parse(event.body)
 
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split('\n')
-    buffer = lines.pop()
-
-    for (const line of lines) {
-      if (!line.startsWith('data: ')) continue
-      const raw = line.slice(6)
-      if (raw === '[DONE]') continue
-
-      let event
-      try { event = JSON.parse(raw) } catch { continue }
-
-      if (event.type === 'content_block_start') {
-        contentBlocks[event.index] = { ...event.content_block }
-        if (event.content_block.type === 'tool_use') currentToolInputJson = ''
-      } else if (event.type === 'content_block_delta') {
-        if (event.delta.type === 'text_delta') {
-          onTextDelta(event.delta.text)
-          if (contentBlocks[event.index]) {
-            contentBlocks[event.index].text =
-              (contentBlocks[event.index].text || '') + event.delta.text
-          }
-        } else if (event.delta.type === 'input_json_delta') {
-          currentToolInputJson += event.delta.partial_json
-        }
-      } else if (event.type === 'content_block_stop') {
-        if (contentBlocks[event.index]?.type === 'tool_use') {
-          try { contentBlocks[event.index].input = JSON.parse(currentToolInputJson) }
-          catch { contentBlocks[event.index].input = {} }
-        }
+    const config = laadConfig(klant)
+    if (!config) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ fout: `Onbekende klant: ${klant}` })
       }
     }
-  }
 
-  return contentBlocks
-}
+    const tools = bouwTools(config)
 
-// ── Non-streaming path (fallback voor Netlify Dev / bufferende proxies) ──────
-async function verwerkZonderStream(config, tools, geschiedenis) {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: apiHeaders(),
-    body: JSON.stringify({
+    const requestBody = {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 500,
       system: bouwSystemPrompt(config),
       messages: geschiedenis,
       ...(tools.length > 0 ? { tools } : {})
-    })
-  })
+    }
 
-  const data = await res.json()
-  if (!data.content) throw new Error(data.error?.message || 'Geen content in response')
-
-  const toolBlock = data.content.find(b => b.type === 'tool_use')
-
-  if (toolBlock?.name === 'plaas_bestelling') {
-    const { items, aantal } = toolBlock.input
-    const omschrijving = items.map((item, i) => `${aantal[i]}x ${item}`).join(', ')
-
-    const res2 = await fetch(API_URL, {
+    const response = await fetch(API_URL, {
       method: 'POST',
       headers: apiHeaders(),
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 500,
-        system: bouwSystemPrompt(config),
-        tools,
-        messages: [
-          ...geschiedenis,
-          { role: 'assistant', content: data.content },
-          {
-            role: 'user',
-            content: [{
-              type: 'tool_result',
-              tool_use_id: toolBlock.id,
-              content: `Bestelling succesvol geplaatst: ${omschrijving}`
-            }]
-          }
-        ]
-      })
+      body: JSON.stringify(requestBody)
     })
 
-    const data2 = await res2.json()
-    const tekst = data2.content?.find(b => b.type === 'text')?.text || 'Bestelling verwerkt.'
-    return { antwoord: tekst, bestelling: { items, aantal } }
-  }
+    const data = await response.json()
 
-  const tekst = data.content.find(b => b.type === 'text')?.text || ''
-  return { antwoord: tekst }
-}
-
-// ── Handler ──────────────────────────────────────────────────────────────────
-export default async (request) => {
-  const { geschiedenis, klant, stream: wantStream = true } = await request.json()
-
-  const config = laadConfig(klant)
-  if (!config) {
-    return new Response(
-      JSON.stringify({ fout: `Onbekende klant: ${klant}` }),
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
-    )
-  }
-
-  const tools = bouwTools(config)
-
-  // ── JSON mode ────────────────────────────────────────────────────────────
-  if (!wantStream) {
-    try {
-      const result = await verwerkZonderStream(config, tools, geschiedenis)
-      return new Response(JSON.stringify(result), {
-        headers: { 'Content-Type': 'application/json' }
-      })
-    } catch (err) {
-      return new Response(JSON.stringify({ fout: err.message }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      })
-    }
-  }
-
-  // ── Streaming mode ───────────────────────────────────────────────────────
-  const encoder = new TextEncoder()
-
-  const readableStream = new ReadableStream({
-    async start(controller) {
-      const send = (data) =>
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`))
-
-      try {
-        const res1 = await fetch(API_URL, {
-          method: 'POST',
-          headers: apiHeaders(),
-          body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 500,
-            system: bouwSystemPrompt(config),
-            messages: geschiedenis,
-            ...(tools.length > 0 ? { tools } : {}),
-            stream: true
-          })
-        })
-
-        const blocks = await parseAnthropicStream(res1, delta => send({ type: 'text', delta }))
-        const toolBlock = blocks.find(b => b.type === 'tool_use')
-
-        if (toolBlock?.name === 'plaas_bestelling') {
-          const { items, aantal } = toolBlock.input
-          const omschrijving = items.map((item, i) => `${aantal[i]}x ${item}`).join(', ')
-
-          const res2 = await fetch(API_URL, {
-            method: 'POST',
-            headers: apiHeaders(),
-            body: JSON.stringify({
-              model: 'claude-haiku-4-5-20251001',
-              max_tokens: 500,
-              system: bouwSystemPrompt(config),
-              tools,
-              messages: [
-                ...geschiedenis,
-                { role: 'assistant', content: blocks },
-                {
-                  role: 'user',
-                  content: [{
-                    type: 'tool_result',
-                    tool_use_id: toolBlock.id,
-                    content: `Bestelling succesvol geplaatst: ${omschrijving}`
-                  }]
-                }
-              ],
-              stream: true
-            })
-          })
-
-          await parseAnthropicStream(res2, delta => send({ type: 'text', delta }))
-          send({ type: 'done', bestelling: { items, aantal } })
-        } else {
-          send({ type: 'done' })
-        }
-      } catch (err) {
-        send({ type: 'error', fout: err.message })
+    if (!data.content) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ fout: data.error?.message })
       }
-
-      controller.close()
     }
-  })
 
-  return new Response(readableStream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
+    const toolBlock = data.content.find(b => b.type === 'tool_use')
+
+    if (toolBlock?.name === 'plaas_bestelling') {
+      const { items, aantal } = toolBlock.input
+      const omschrijving = items.map((item, i) => `${aantal[i]}x ${item}`).join(', ')
+
+      const res2 = await fetch(API_URL, {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 500,
+          system: bouwSystemPrompt(config),
+          tools,
+          messages: [
+            ...geschiedenis,
+            { role: 'assistant', content: data.content },
+            {
+              role: 'user',
+              content: [{
+                type: 'tool_result',
+                tool_use_id: toolBlock.id,
+                content: `Bestelling succesvol geplaatst: ${omschrijving}`
+              }]
+            }
+          ]
+        })
+      })
+
+      const data2 = await res2.json()
+      const tekst = data2.content?.find(b => b.type === 'text')?.text || 'Bestelling verwerkt.'
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ antwoord: tekst, bestelling: { items, aantal } })
+      }
     }
-  })
+
+    const tekst = data.content.find(b => b.type === 'text')?.text || ''
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ antwoord: tekst })
+    }
+  } catch (err) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ fout: err.message })
+    }
+  }
 }

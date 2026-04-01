@@ -20,7 +20,9 @@ exports.handler = async (event) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       bedrijfsnaam: config.bedrijfsnaam,
-      type: config.type
+      type: config.type,
+      beschrijving: config.beschrijving || '',
+      accentKleur: config.accentKleur || null
     })
   }
 }

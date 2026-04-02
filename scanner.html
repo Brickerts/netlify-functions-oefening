@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document Scanner</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1219;
+      --surface:   #1a2332;
+      --surface2:  #232f42;
+      --accent:    #3b82f6;
+      --text:      #e2e8f0;
+      --text-muted:#8899b0;
+      --radius:    16px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 800px;
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -.3px; }
+    header p  { font-size: .85rem; color: var(--text-muted); margin-top: 4px; }
+
+    .nav-link {
+      font-size: .82rem;
+      color: var(--accent);
+      text-decoration: none;
+      white-space: nowrap;
+      opacity: .85;
+    }
+    .nav-link:hover { opacity: 1; text-decoration: underline; }
+
+    /* ── Main ── */
+    main {
+      width: 100%;
+      max-width: 800px;
+      padding: 28px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Upload zone ── */
+    #upload-zone {
+      border: 2px dashed var(--surface2);
+      border-radius: var(--radius);
+      padding: 48px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+    }
+
+    #upload-zone:hover,
+    #upload-zone.over {
+      border-color: var(--accent);
+      background: rgba(59,130,246,.05);
+    }
+
+    #upload-zone svg { width: 40px; height: 40px; stroke: var(--text-muted); margin-bottom: 12px; }
+
+    #upload-zone p {
+      font-size: .92rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    #upload-zone strong { color: var(--accent); cursor: pointer; }
+
+    #bestand-input { display: none; }
+
+    /* ── Preview ── */
+    #preview {
+      display: none;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    #preview img {
+      width: 100%;
+      max-height: 320px;
+      object-fit: contain;
+      background: #111;
+      display: block;
+    }
+
+    .preview-pdf {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 18px;
+    }
+
+    .preview-pdf svg { width: 32px; height: 32px; flex-shrink: 0; fill: var(--accent); }
+
+    .preview-pdf-info span { display: block; }
+    .preview-pdf-info .naam { font-weight: 600; font-size: .95rem; }
+    .preview-pdf-info .grootte { font-size: .82rem; color: var(--text-muted); margin-top: 2px; }
+
+    .preview-acties {
+      display: flex;
+      gap: 10px;
+      padding: 14px 18px;
+      border-top: 1px solid var(--surface2);
+    }
+
+    /* ── Knoppen ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: 24px;
+      border: none;
+      font-size: .88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity .2s;
+    }
+    .btn:hover   { opacity: .85; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .btn-primary  { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface2); color: var(--text); }
+
+    .btn svg { width: 15px; height: 15px; }
+
+    /* ── Laadindicator ── */
+    #laadindicator {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      padding: 18px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      font-size: .9rem;
+      color: var(--text-muted);
+    }
+
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--surface2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Resultaten ── */
+    #resultaten { display: none; flex-direction: column; gap: 16px; }
+
+    #resultaten h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      font-size: .78rem;
+    }
+
+    .velden-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+    }
+
+    .veld {
+      background: var(--surface);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+
+    .veld label {
+      display: block;
+      font-size: .72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 5px;
+    }
+
+    .veld input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--surface2);
+      color: var(--text);
+      font-size: .9rem;
+      padding: 2px 0 4px;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    .veld input:focus { border-bottom-color: var(--accent); }
+    .veld input[value="null"], .veld input:placeholder-shown { color: var(--text-muted); }
+
+    /* ── Regels tabel ── */
+    .tabel-wrapper {
+      overflow-x: auto;
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+    }
+
+    th {
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 10px 14px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    td {
+      background: var(--surface);
+      padding: 9px 14px;
+      border-top: 1px solid var(--surface2);
+    }
+
+    td input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-size: .88rem;
+      outline: none;
+    }
+
+    td input:focus { color: var(--accent); }
+
+    .resultaat-acties { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* ── Fout ── */
+    #fout {
+      display: none;
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #fca5a5;
+      font-size: .9rem;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      header, main { padding-left: 14px; padding-right: 14px; }
+      .velden-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Document Scanner</h1>
+    <p>Extraheer factuurdata uit PDF of afbeelding</p>
+  </div>
+  <a href="index.html" class="nav-link">← Terug naar chatbot</a>
+</header>
+
+<main>
+  <!-- Upload zone -->
+  <div id="upload-zone">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 16V4m0 0L8 8m4-4 4 4"/>
+      <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+    </svg>
+    <p>Sleep een bestand hierheen of <strong id="kies-label">kies een bestand</strong></p>
+    <p style="margin-top:6px;font-size:.78rem;">PDF, JPG of PNG — max 10 MB</p>
+    <input type="file" id="bestand-input" accept=".pdf,.jpg,.jpeg,.png">
+  </div>
+
+  <!-- Preview -->
+  <div id="preview"></div>
+
+  <!-- Laadindicator -->
+  <div id="laadindicator">
+    <div class="spinner"></div>
+    <span>Document wordt gescand door Claude…</span>
+  </div>
+
+  <!-- Foutmelding -->
+  <div id="fout"></div>
+
+  <!-- Resultaten -->
+  <div id="resultaten"></div>
+</main>
+
+<script>
+  let huidigBestand = null
+
+  const uploadZone   = document.getElementById('upload-zone')
+  const bestandInput = document.getElementById('bestand-input')
+  const previewEl    = document.getElementById('preview')
+  const laadEl       = document.getElementById('laadindicator')
+  const foutEl       = document.getElementById('fout')
+  const resultatenEl = document.getElementById('resultaten')
+
+  // ── Drag & drop ──────────────────────────────────────────────────────────
+  uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('over') })
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('over'))
+  uploadZone.addEventListener('drop', (e) => {
+    e.preventDefault()
+    uploadZone.classList.remove('over')
+    const bestand = e.dataTransfer.files[0]
+    if (bestand) verwerkBestand(bestand)
+  })
+
+  uploadZone.addEventListener('click', () => bestandInput.click())
+  document.getElementById('kies-label').addEventListener('click', (e) => { e.stopPropagation(); bestandInput.click() })
+  bestandInput.addEventListener('change', () => {
+    if (bestandInput.files[0]) verwerkBestand(bestandInput.files[0])
+  })
+
+  // ── Bestand verwerken ────────────────────────────────────────────────────
+  function verwerkBestand(bestand) {
+    const toegestaan = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+    if (!toegestaan.includes(bestand.type)) {
+      toonFout('Alleen PDF, JPG en PNG bestanden zijn toegestaan.')
+      return
+    }
+    if (bestand.size > 10 * 1024 * 1024) {
+      toonFout('Bestand is groter dan 10 MB.')
+      return
+    }
+
+    huidigBestand = bestand
+    verbergResultaten()
+    toonPreview(bestand)
+  }
+
+  function toonPreview(bestand) {
+    previewEl.innerHTML = ''
+    foutEl.style.display = 'none'
+
+    if (bestand.type === 'application/pdf') {
+      const grootte = (bestand.size / 1024).toFixed(0)
+      previewEl.innerHTML = `
+        <div class="preview-pdf">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM8.5 14.5h1.8c.8 0 1.4-.2 1.8-.6.4-.4.6-.9.6-1.6 0-.7-.2-1.2-.6-1.6-.4-.4-1-.6-1.8-.6H8.5v4.4zm1.1-3.3h.7c.4 0 .7.1.9.3.2.2.3.5.3.9s-.1.7-.3.9c-.2.2-.5.3-.9.3h-.7v-2.4zm4.2 3.3h1.6c.9 0 1.6-.3 2.1-.8.5-.5.7-1.2.7-2 0-.8-.2-1.5-.7-2-.5-.5-1.2-.8-2.1-.8h-1.6v5.6zm1.1-4.5h.5c.5 0 .9.2 1.2.5.3.3.4.8.4 1.4 0 .6-.1 1.1-.4 1.4-.3.3-.7.5-1.2.5h-.5v-3.8zm-8 4.5H6v-5.6h1.1v2.3H8.5v1H7.1v1.3H6z"/>
+          </svg>
+          <div class="preview-pdf-info">
+            <span class="naam">${bestand.name}</span>
+            <span class="grootte">${grootte} KB</span>
+          </div>
+        </div>`
+    } else {
+      const url = URL.createObjectURL(bestand)
+      previewEl.innerHTML = `<img src="${url}" alt="Preview">`
+    }
+
+    previewEl.innerHTML += `
+      <div class="preview-acties">
+        <button class="btn btn-primary" onclick="scanDocument()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/>
+          </svg>
+          Scannen
+        </button>
+        <button class="btn btn-secondary" onclick="opnieuwScannen()">Ander bestand</button>
+      </div>`
+
+    previewEl.style.display = 'block'
+  }
+
+  // ── Scannen ──────────────────────────────────────────────────────────────
+  async function scanDocument() {
+    if (!huidigBestand) return
+
+    foutEl.style.display = 'none'
+    verbergResultaten()
+    laadEl.style.display = 'flex'
+    previewEl.querySelector('.preview-acties').querySelectorAll('button').forEach(b => b.disabled = true)
+
+    try {
+      const base64 = await naarBase64(huidigBestand)
+      const mediaType = huidigBestand.type === 'image/jpg' ? 'image/jpeg' : huidigBestand.type
+
+      const res = await fetch('/.netlify/functions/scan-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bestand: base64, mediaType })
+      })
+
+      const data = await res.json()
+      laadEl.style.display = 'none'
+
+      if (data.fout) {
+        toonFout(data.fout)
+      } else if (data.resultaat) {
+        toonResultaten(data.resultaat)
+      } else {
+        toonFout('Kon geen structuur herkennen. Ruwe output: ' + (data.ruweTekst || '—'))
+      }
+    } catch (e) {
+      laadEl.style.display = 'none'
+      toonFout('Verbindingsfout: ' + e.message)
+    }
+
+    previewEl.querySelector('.preview-acties').querySelectorAll('button').forEach(b => b.disabled = false)
+  }
+
+  function naarBase64(bestand) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result.split(',')[1])
+      reader.onerror = reject
+      reader.readAsDataURL(bestand)
+    })
+  }
+
+  // ── Resultaten tonen ─────────────────────────────────────────────────────
+  function toonResultaten(data) {
+    const VELD_LABELS = {
+      bedrijfsnaam:  'Bedrijfsnaam',
+      datum:         'Datum',
+      factuurnummer: 'Factuurnummer',
+      bedrag_totaal: 'Totaalbedrag',
+      btw_bedrag:    'BTW bedrag',
+      btw_percentage:'BTW percentage',
+      betaaltermijn: 'Betaaltermijn',
+      iban:          'IBAN'
+    }
+
+    const veldHtml = Object.entries(VELD_LABELS).map(([sleutel, label]) => `
+      <div class="veld">
+        <label>${label}</label>
+        <input type="text" id="veld-${sleutel}" value="${data[sleutel] ?? ''}" placeholder="—">
+      </div>`).join('')
+
+    const regelHtml = (data.regels || []).map((r, i) => `
+      <tr>
+        <td><input type="text" value="${r.omschrijving ?? ''}" oninput="updateRegel(${i}, 'omschrijving', this.value)"></td>
+        <td><input type="text" value="${r.aantal ?? ''}" oninput="updateRegel(${i}, 'aantal', this.value)"></td>
+        <td><input type="text" value="${r.bedrag ?? ''}" oninput="updateRegel(${i}, 'bedrag', this.value)"></td>
+      </tr>`).join('')
+
+    resultatenEl.innerHTML = `
+      <h2>Geëxtraheerde data</h2>
+      <div class="velden-grid">${veldHtml}</div>
+
+      ${data.regels?.length ? `
+      <h2>Regelitems</h2>
+      <div class="tabel-wrapper">
+        <table>
+          <thead><tr><th>Omschrijving</th><th>Aantal</th><th>Bedrag</th></tr></thead>
+          <tbody>${regelHtml}</tbody>
+        </table>
+      </div>` : ''}
+
+      <div class="resultaat-acties">
+        <button class="btn btn-primary" onclick="downloadJSON()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 4v12m0 0-4-4m4 4 4-4"/><path d="M4 20h16"/>
+          </svg>
+          Download JSON
+        </button>
+        <button class="btn btn-secondary" onclick="opnieuwScannen()">Opnieuw scannen</button>
+      </div>`
+
+    resultatenEl.style.display = 'flex'
+    resultatenEl._data = data
+  }
+
+  function updateRegel(index, veld, waarde) {
+    if (resultatenEl._data?.regels?.[index]) {
+      resultatenEl._data.regels[index][veld] = waarde
+    }
+  }
+
+  // ── Download JSON ────────────────────────────────────────────────────────
+  function downloadJSON() {
+    const data = { ...resultatenEl._data }
+
+    // Lees de bewerkbare velden uit
+    const velden = ['bedrijfsnaam','datum','factuurnummer','bedrag_totaal','btw_bedrag','btw_percentage','betaaltermijn','iban']
+    velden.forEach(v => {
+      const el = document.getElementById(`veld-${v}`)
+      if (el) data[v] = el.value || null
+    })
+
+    const json = JSON.stringify(data, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `scan-${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ── Hulpfuncties ─────────────────────────────────────────────────────────
+  function toonFout(tekst) {
+    foutEl.textContent = tekst
+    foutEl.style.display = 'block'
+  }
+
+  function verbergResultaten() {
+    resultatenEl.style.display = 'none'
+    resultatenEl.innerHTML = ''
+    resultatenEl._data = null
+  }
+
+  function opnieuwScannen() {
+    huidigBestand = null
+    previewEl.style.display = 'none'
+    previewEl.innerHTML = ''
+    foutEl.style.display = 'none'
+    verbergResultaten()
+    bestandInput.value = ''
+  }
+</script>
+</body>
+</html>

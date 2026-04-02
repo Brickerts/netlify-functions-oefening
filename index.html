@@ -33,6 +33,10 @@
       max-width: 700px;
       padding: 24px 20px 16px;
       border-bottom: 1px solid var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
     }
 
     header h1 {
@@ -47,6 +51,15 @@
       margin-top: 4px;
       line-height: 1.4;
     }
+
+    .nav-link {
+      font-size: .82rem;
+      color: var(--accent);
+      text-decoration: none;
+      white-space: nowrap;
+      opacity: .85;
+    }
+    .nav-link:hover { opacity: 1; text-decoration: underline; }
 
     /* ── Chat area ── */
     #chat {
@@ -193,8 +206,11 @@
 <body>
 
   <header>
-    <h1 id="titel">Chatbot</h1>
-    <p id="beschrijving"></p>
+    <div>
+      <h1 id="titel">Chatbot</h1>
+      <p id="beschrijving"></p>
+    </div>
+    <a href="scanner.html" class="nav-link">Document Scanner →</a>
   </header>
 
   <div id="chat"></div>

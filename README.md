@@ -22,14 +22,3 @@ Oefenproject voor het leerplan AI Freelancing.
 2. Maak een `.env` bestand aan met `ANTHROPIC_API_KEY=jouw_sleutel`
 3. Run `netlify dev`
 4. Open `http://localhost:8888`
-```
-
-Sla op met Ctrl + S. Daarna in de terminal:
-```
-git add README.md
-```
-```
-git commit -m "add README"
-```
-```
-git push

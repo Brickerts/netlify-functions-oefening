@@ -122,6 +122,13 @@ exports.handler = async (event) => {
       const { items, aantal } = toolBlock.input
       const omschrijving = items.map((item, i) => `${aantal[i]}x ${item}`).join(', ')
 
+      // Sla bestelling op in Supabase (fire-and-forget, fout blokkeert niet)
+      fetch(`${process.env.URL}/.netlify/functions/sla-bestelling-op`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ klant: config.bedrijfsnaam, items, aantal })
+      }).catch(() => {})
+
       const res2 = await fetch(API_URL, {
         method: 'POST',
         headers: apiHeaders(),

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lead Reactivatie</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1219;
+      --surface:   #1a2332;
+      --surface2:  #232f42;
+      --accent:    #3b82f6;
+      --text:      #e2e8f0;
+      --text-muted:#8899b0;
+      --radius:    16px;
+      --groen:     #22c55e;
+      --oranje:    #f59e0b;
+      --rood:      #ef4444;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ── */
+    header {
+      width: 100%;
+      max-width: 960px;
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -.3px; }
+    header p  { font-size: .85rem; color: var(--text-muted); margin-top: 4px; }
+
+    .nav-links { display: flex; gap: 16px; align-items: center; flex-shrink: 0; }
+    .nav-link  { font-size: .82rem; color: var(--accent); text-decoration: none; white-space: nowrap; opacity: .85; }
+    .nav-link:hover { opacity: 1; text-decoration: underline; }
+
+    /* ── Main ── */
+    main {
+      width: 100%;
+      max-width: 960px;
+      padding: 24px 20px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    /* ── Sectie titels ── */
+    .sectie-titel {
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 12px;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .filter-groep { display: flex; align-items: center; gap: 8px; }
+    .filter-groep label { font-size: .85rem; color: var(--text-muted); }
+
+    select {
+      background: var(--surface);
+      border: 1px solid var(--surface2);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .88rem;
+      padding: 7px 12px;
+      outline: none;
+      cursor: pointer;
+    }
+    select:focus { border-color: var(--accent); }
+
+    /* ── Lead toevoegen formulier ── */
+    .formulier {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .form-veld label {
+      display: block;
+      font-size: .73rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin-bottom: 5px;
+    }
+
+    .form-veld input, .form-veld select, .form-veld textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .88rem;
+      padding: 8px 12px;
+      outline: none;
+      transition: border-color .2s;
+      font-family: inherit;
+    }
+
+    .form-veld input:focus, .form-veld select:focus, .form-veld textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .form-veld textarea { resize: vertical; min-height: 60px; }
+
+    /* ── Knoppen ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: none;
+      font-size: .85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity .15s;
+      font-family: inherit;
+    }
+    .btn:hover    { opacity: .85; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .btn-primary   { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface2); color: var(--text); }
+    .btn-sm        { padding: 5px 12px; font-size: .8rem; }
+
+    /* ── Tabel ── */
+    .tabel-wrapper { overflow-x: auto; border-radius: var(--radius); }
+
+    table { width: 100%; border-collapse: collapse; font-size: .87rem; }
+
+    thead th {
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: .73rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 10px 14px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    tbody tr:hover td { background: var(--surface2); }
+
+    td {
+      background: var(--surface);
+      padding: 10px 14px;
+      border-top: 1px solid var(--bg);
+      vertical-align: top;
+    }
+
+    /* ── Status indicator ── */
+    .dag-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    .dag-cel { display: flex; align-items: center; white-space: nowrap; }
+
+    .groen  { background: var(--groen); }
+    .oranje { background: var(--oranje); }
+    .rood   { background: var(--rood); }
+
+    .status-badge {
+      display: inline-block;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: .75rem;
+      font-weight: 500;
+    }
+    .status-actief       { background: rgba(34,197,94,.15);  color: var(--groen); }
+    .status-inactief     { background: rgba(239,68,68,.15);  color: var(--rood); }
+    .status-heractiveerd { background: rgba(59,130,246,.15); color: var(--accent); }
+
+    /* ── Bericht sectie ── */
+    .bericht-rij td { padding: 0; border-top: none; }
+
+    .bericht-vak {
+      background: rgba(59,130,246,.06);
+      border-left: 3px solid var(--accent);
+      margin: 0 14px 10px;
+      padding: 12px 14px;
+      border-radius: 0 8px 8px 0;
+      font-size: .88rem;
+      line-height: 1.6;
+    }
+
+    .bericht-acties {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin: 0 14px 14px;
+      flex-wrap: wrap;
+    }
+
+    .kopie-bevestiging {
+      font-size: .78rem;
+      color: var(--groen);
+      display: none;
+    }
+
+    /* ── Laadindicator ── */
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid var(--surface2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .leeg {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-muted);
+      font-size: .9rem;
+    }
+
+    .fout-banner {
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #fca5a5;
+      font-size: .88rem;
+    }
+
+    @media (max-width: 480px) {
+      header, main { padding-left: 14px; padding-right: 14px; }
+      .form-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Lead Reactivatie</h1>
+    <p>Beheer klanten en genereer persoonlijke reactivatieberichten</p>
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Chatbot</a>
+    <a href="scanner.html" class="nav-link">Scanner</a>
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Lead toevoegen ── -->
+  <section>
+    <div class="sectie-titel">Lead toevoegen</div>
+    <div class="formulier">
+      <div class="form-grid">
+        <div class="form-veld">
+          <label>Naam *</label>
+          <input type="text" id="f-naam" placeholder="Jan de Vries">
+        </div>
+        <div class="form-veld">
+          <label>Klant (config)</label>
+          <select id="f-klant">
+            <option value="Demo Café">Demo Café</option>
+            <option value="Stijlvol">Stijlvol</option>
+          </select>
+        </div>
+        <div class="form-veld">
+          <label>Email</label>
+          <input type="email" id="f-email" placeholder="jan@voorbeeld.nl">
+        </div>
+        <div class="form-veld">
+          <label>Telefoon</label>
+          <input type="tel" id="f-telefoon" placeholder="06-12345678">
+        </div>
+        <div class="form-veld">
+          <label>Laatste bezoek</label>
+          <input type="date" id="f-laatste-bezoek">
+        </div>
+        <div class="form-veld">
+          <label>Totaal bezoeken</label>
+          <input type="number" id="f-bezoeken" min="0" placeholder="0">
+        </div>
+        <div class="form-veld" style="grid-column: 1 / -1;">
+          <label>Notities</label>
+          <textarea id="f-notities" placeholder="Vaste klant, houdt van oat latte…"></textarea>
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="voegLeadToe()">Lead opslaan</button>
+      <span id="opslaan-status" style="margin-left:12px;font-size:.82rem;color:var(--text-muted);"></span>
+    </div>
+  </section>
+
+  <!-- ── Leads overzicht ── -->
+  <section>
+    <div class="toolbar" style="margin-bottom:12px;">
+      <div class="sectie-titel" style="margin-bottom:0;">Leads overzicht</div>
+      <div class="filter-groep">
+        <label for="klant-filter">Klant:</label>
+        <select id="klant-filter">
+          <option value="">Alle klanten</option>
+          <option value="Demo Café">Demo Café</option>
+          <option value="Stijlvol">Stijlvol</option>
+        </select>
+      </div>
+    </div>
+    <div class="tabel-wrapper" id="tabel-container">
+      <div class="leeg"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  const KLANT_CONFIGS = {
+    'Demo Café': { type: 'horeca' },
+    'Stijlvol':  { type: 'kapsalon' }
+  }
+
+  // ── URL filter ────────────────────────────────────────────────────────────
+  const klantFilter = document.getElementById('klant-filter')
+  const urlKlant = new URLSearchParams(window.location.search).get('klant')
+  if (urlKlant) klantFilter.value = urlKlant
+
+  klantFilter.addEventListener('change', () => {
+    const url = new URL(window.location)
+    if (klantFilter.value) url.searchParams.set('klant', klantFilter.value)
+    else url.searchParams.delete('klant')
+    history.replaceState(null, '', url)
+    laadLeads()
+  })
+
+  // ── Lead opslaan ──────────────────────────────────────────────────────────
+  async function voegLeadToe() {
+    const naam = document.getElementById('f-naam').value.trim()
+    if (!naam) { alert('Naam is verplicht.'); return }
+
+    const status = document.getElementById('opslaan-status')
+    status.textContent = 'Opslaan…'
+
+    const lead = {
+      naam,
+      klant:           document.getElementById('f-klant').value,
+      email:           document.getElementById('f-email').value || null,
+      telefoon:        document.getElementById('f-telefoon').value || null,
+      laatste_bezoek:  document.getElementById('f-laatste-bezoek').value || null,
+      totaal_bezoeken: parseInt(document.getElementById('f-bezoeken').value) || 0,
+      notities:        document.getElementById('f-notities').value || null,
+      status:          'actief'
+    }
+
+    try {
+      const res = await fetch('/.netlify/functions/beheer-leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actie: 'toevoegen', lead })
+      })
+      const data = await res.json()
+      if (data.fout) { status.textContent = 'Fout: ' + data.fout; return }
+
+      status.textContent = 'Opgeslagen!'
+      setTimeout(() => status.textContent = '', 2000)
+
+      // Reset formulier
+      ;['f-naam','f-email','f-telefoon','f-laatste-bezoek','f-bezoeken','f-notities']
+        .forEach(id => document.getElementById(id).value = '')
+
+      laadLeads()
+    } catch (e) {
+      status.textContent = 'Fout: ' + e.message
+    }
+  }
+
+  // ── Leads laden ───────────────────────────────────────────────────────────
+  async function laadLeads() {
+    const params = klantFilter.value
+      ? `?klant=${encodeURIComponent(klantFilter.value)}`
+      : ''
+
+    try {
+      const res = await fetch(`/.netlify/functions/beheer-leads${params}`)
+      const data = await res.json()
+      if (data.fout) { toonFout(data.fout); return }
+      renderTabel(data.leads)
+    } catch (e) {
+      toonFout('Verbindingsfout: ' + e.message)
+    }
+  }
+
+  // ── Tabel renderen ────────────────────────────────────────────────────────
+  function dagKleur(datumStr) {
+    if (!datumStr) return { klasse: 'oranje', dagen: null }
+    const dagen = Math.floor((Date.now() - new Date(datumStr)) / 86400000)
+    if (dagen < 30)  return { klasse: 'groen',  dagen }
+    if (dagen < 90)  return { klasse: 'oranje', dagen }
+    return                  { klasse: 'rood',   dagen }
+  }
+
+  function renderTabel(leads) {
+    const container = document.getElementById('tabel-container')
+
+    if (!leads.length) {
+      container.innerHTML = '<div class="leeg">Geen leads gevonden. Voeg een lead toe hierboven.</div>'
+      return
+    }
+
+    const rijen = leads.map((lead, idx) => {
+      const { klasse, dagen } = dagKleur(lead.laatste_bezoek)
+      const dagenTekst = dagen !== null
+        ? `${dagen} dag${dagen !== 1 ? 'en' : ''} geleden`
+        : '—'
+      const datumTekst = lead.laatste_bezoek
+        ? new Date(lead.laatste_bezoek).toLocaleDateString('nl-NL')
+        : '—'
+
+      return `
+        <tr id="rij-${idx}">
+          <td><strong>${escHtml(lead.naam)}</strong>${lead.email ? `<br><span style="font-size:.8rem;color:var(--text-muted)">${escHtml(lead.email)}</span>` : ''}</td>
+          <td><span class="status-badge status-${lead.status}">${lead.status}</span></td>
+          <td><span class="status-badge" style="background:rgba(59,130,246,.1);color:var(--text-muted)">${escHtml(lead.klant)}</span></td>
+          <td>
+            <div class="dag-cel">
+              <span class="dag-dot ${klasse}"></span>
+              <span title="${datumTekst}">${dagenTekst}</span>
+            </div>
+          </td>
+          <td>${lead.totaal_bezoeken || 0}×</td>
+          <td>
+            <button class="btn btn-secondary btn-sm" onclick="genereerBericht(${idx})">
+              Genereer bericht
+            </button>
+          </td>
+        </tr>
+        <tr class="bericht-rij" id="bericht-rij-${idx}" style="display:none;">
+          <td colspan="6">
+            <div class="bericht-vak" id="bericht-tekst-${idx}"></div>
+            <div class="bericht-acties">
+              <button class="btn btn-secondary btn-sm" onclick="kopieerBericht(${idx})">Kopieer</button>
+              <span class="kopie-bevestiging" id="kopie-ok-${idx}">✓ Gekopieerd</span>
+            </div>
+          </td>
+        </tr>`
+    }).join('')
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Naam</th>
+            <th>Status</th>
+            <th>Klant</th>
+            <th>Laatste bezoek</th>
+            <th>Bezoeken</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rijen}</tbody>
+      </table>`
+
+    // Leads opslaan voor gebruik in genereerBericht
+    container._leads = leads
+  }
+
+  // ── Bericht genereren ─────────────────────────────────────────────────────
+  async function genereerBericht(idx) {
+    const leads = document.getElementById('tabel-container')._leads
+    const lead = leads[idx]
+    const berichtVak = document.getElementById(`bericht-tekst-${idx}`)
+    const berichtRij = document.getElementById(`bericht-rij-${idx}`)
+    const knop = document.querySelector(`#rij-${idx} button`)
+
+    berichtVak.innerHTML = '<div class="spinner"></div>'
+    berichtRij.style.display = 'table-row'
+    knop.disabled = true
+
+    const config = KLANT_CONFIGS[lead.klant] || { type: 'bedrijf' }
+
+    try {
+      const res = await fetch('/.netlify/functions/genereer-reactivatie', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead,
+          bedrijfsnaam: lead.klant,
+          bedrijfstype: config.type
+        })
+      })
+      const data = await res.json()
+      berichtVak.textContent = data.bericht || data.fout || 'Geen bericht gegenereerd.'
+    } catch (e) {
+      berichtVak.textContent = 'Fout: ' + e.message
+    }
+
+    knop.disabled = false
+  }
+
+  // ── Bericht kopiëren ──────────────────────────────────────────────────────
+  function kopieerBericht(idx) {
+    const tekst = document.getElementById(`bericht-tekst-${idx}`).textContent
+    navigator.clipboard.writeText(tekst).then(() => {
+      const ok = document.getElementById(`kopie-ok-${idx}`)
+      ok.style.display = 'inline'
+      setTimeout(() => ok.style.display = 'none', 2000)
+    })
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function toonFout(tekst) {
+    document.getElementById('tabel-container').innerHTML =
+      `<div class="fout-banner">${escHtml(tekst)}</div>`
+  }
+
+  function escHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  }
+
+  laadLeads()
+</script>
+</body>
+</html>

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kennisbank</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1219;
+      --surface:   #1a2332;
+      --surface2:  #232f42;
+      --accent:    #3b82f6;
+      --text:      #e2e8f0;
+      --text-muted:#8899b0;
+      --radius:    16px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      max-width: 860px;
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -.3px; }
+    header p  { font-size: .85rem; color: var(--text-muted); margin-top: 4px; }
+
+    .nav-links { display: flex; gap: 16px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+    .nav-link  { font-size: .82rem; color: var(--accent); text-decoration: none; white-space: nowrap; opacity: .85; }
+    .nav-link:hover { opacity: 1; text-decoration: underline; }
+
+    main {
+      width: 100%;
+      max-width: 860px;
+      padding: 28px 20px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    .sectie-titel {
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 14px;
+    }
+
+    /* ── Upload formulier ── */
+    .formulier {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .form-rij {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .form-veld label {
+      display: block;
+      font-size: .73rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin-bottom: 5px;
+    }
+
+    .form-veld input,
+    .form-veld select,
+    .form-veld textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .9rem;
+      padding: 9px 13px;
+      outline: none;
+      transition: border-color .2s;
+      font-family: inherit;
+    }
+
+    .form-veld input:focus,
+    .form-veld select:focus,
+    .form-veld textarea:focus { border-color: var(--accent); }
+
+    .form-veld textarea {
+      resize: vertical;
+      min-height: 160px;
+      line-height: 1.6;
+    }
+
+    .form-acties {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .voortgang {
+      font-size: .82rem;
+      color: var(--text-muted);
+    }
+
+    .voortgang.succes { color: #22c55e; }
+    .voortgang.fout   { color: #f87171; }
+
+    /* ── Knoppen ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 18px;
+      border-radius: 20px;
+      border: none;
+      font-size: .87rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity .15s;
+      font-family: inherit;
+    }
+    .btn:hover    { opacity: .85; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary   { background: var(--accent); color: #fff; }
+    .btn-danger    { background: rgba(239,68,68,.15); color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+    .btn-sm        { padding: 5px 12px; font-size: .78rem; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid var(--surface2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Documenten tabel ── */
+    .filter-balk {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .filter-balk label { font-size: .85rem; color: var(--text-muted); }
+
+    select {
+      background: var(--surface);
+      border: 1px solid var(--surface2);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .88rem;
+      padding: 7px 12px;
+      outline: none;
+      cursor: pointer;
+    }
+    select:focus { border-color: var(--accent); }
+
+    .tabel-wrapper { overflow-x: auto; border-radius: var(--radius); }
+
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+
+    thead th {
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: .73rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 10px 14px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    tbody tr:hover td { background: var(--surface2); }
+
+    td {
+      background: var(--surface);
+      padding: 10px 14px;
+      border-top: 1px solid var(--bg);
+      vertical-align: middle;
+    }
+
+    .klant-badge {
+      display: inline-block;
+      background: rgba(59,130,246,.12);
+      color: var(--accent);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: .76rem;
+      font-weight: 500;
+    }
+
+    .tijdstip { color: var(--text-muted); font-size: .82rem; }
+
+    .leeg {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: .9rem;
+    }
+
+    .fout-banner {
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #fca5a5;
+      font-size: .88rem;
+    }
+
+    @media (max-width: 540px) {
+      header, main { padding-left: 14px; padding-right: 14px; }
+      .form-rij { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Kennisbank</h1>
+    <p>Upload bedrijfsdocumenten zodat de chatbot context-aware antwoorden geeft</p>
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Chatbot</a>
+    <a href="scanner.html" class="nav-link">Scanner</a>
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="leads.html" class="nav-link">Leads</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- ── Document uploaden ── -->
+  <section>
+    <div class="sectie-titel">Document uploaden</div>
+    <div class="formulier">
+      <div class="form-rij">
+        <div class="form-veld">
+          <label>Klant *</label>
+          <select id="u-klant">
+            <option value="Demo Café">Demo Café</option>
+            <option value="Stijlvol">Stijlvol</option>
+          </select>
+        </div>
+        <div class="form-veld">
+          <label>Titel *</label>
+          <input type="text" id="u-titel" placeholder="FAQ, Menu, Beleid…">
+        </div>
+      </div>
+      <div class="form-veld">
+        <label>Content (platte tekst) *</label>
+        <textarea id="u-content" placeholder="Plak hier de tekst van het document. Lange teksten worden automatisch in chunks opgesplitst met overlap voor betere zoekresultaten."></textarea>
+      </div>
+      <div class="form-acties">
+        <button class="btn btn-primary" id="upload-knop" onclick="uploadDocument()">Uploaden</button>
+        <span class="voortgang" id="upload-status"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Documenten overzicht ── -->
+  <section>
+    <div class="filter-balk">
+      <div class="sectie-titel" style="margin-bottom:0;">Geüploade documenten</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
+        <label for="filter-klant">Klant:</label>
+        <select id="filter-klant">
+          <option value="">Alle klanten</option>
+          <option value="Demo Café">Demo Café</option>
+          <option value="Stijlvol">Stijlvol</option>
+        </select>
+      </div>
+    </div>
+    <div class="tabel-wrapper" id="tabel-container">
+      <div class="leeg"><span class="spinner"></span></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  const filterKlant = document.getElementById('filter-klant')
+  const urlKlant = new URLSearchParams(window.location.search).get('klant')
+  if (urlKlant) filterKlant.value = urlKlant
+
+  filterKlant.addEventListener('change', () => {
+    const url = new URL(window.location)
+    if (filterKlant.value) url.searchParams.set('klant', filterKlant.value)
+    else url.searchParams.delete('klant')
+    history.replaceState(null, '', url)
+    laadDocumenten()
+  })
+
+  // ── Uploaden ─────────────────────────────────────────────────────────────
+  async function uploadDocument() {
+    const klant   = document.getElementById('u-klant').value
+    const titel   = document.getElementById('u-titel').value.trim()
+    const content = document.getElementById('u-content').value.trim()
+    const status  = document.getElementById('upload-status')
+    const knop    = document.getElementById('upload-knop')
+
+    if (!titel || !content) {
+      status.className = 'voortgang fout'
+      status.textContent = 'Titel en content zijn verplicht.'
+      return
+    }
+
+    status.className = 'voortgang'
+    status.innerHTML = '<span class="spinner"></span> Embeddings genereren en opslaan…'
+    knop.disabled = true
+
+    try {
+      const res = await fetch('/.netlify/functions/upload-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ klant, titel, content })
+      })
+      const data = await res.json()
+
+      if (data.fout) {
+        status.className = 'voortgang fout'
+        status.textContent = 'Fout: ' + data.fout
+      } else {
+        status.className = 'voortgang succes'
+        status.textContent = `✓ ${data.opgeslagen} chunk${data.opgeslagen !== 1 ? 's' : ''} opgeslagen`
+        document.getElementById('u-titel').value = ''
+        document.getElementById('u-content').value = ''
+        setTimeout(() => { status.textContent = '' }, 4000)
+        laadDocumenten()
+      }
+    } catch (e) {
+      status.className = 'voortgang fout'
+      status.textContent = 'Verbindingsfout: ' + e.message
+    }
+
+    knop.disabled = false
+  }
+
+  // ── Documenten laden ──────────────────────────────────────────────────────
+  async function laadDocumenten() {
+    const params = filterKlant.value
+      ? `?klant=${encodeURIComponent(filterKlant.value)}`
+      : ''
+
+    try {
+      const res = await fetch(`/.netlify/functions/beheer-documenten${params}`)
+      const data = await res.json()
+      if (data.fout) { toonFout(data.fout); return }
+      renderTabel(data.documenten)
+    } catch (e) {
+      toonFout('Verbindingsfout: ' + e.message)
+    }
+  }
+
+  // ── Tabel renderen ────────────────────────────────────────────────────────
+  function renderTabel(docs) {
+    const container = document.getElementById('tabel-container')
+
+    if (!docs.length) {
+      container.innerHTML = '<div class="leeg">Geen documenten gevonden. Upload een document hierboven.</div>'
+      return
+    }
+
+    const rijen = docs.map(doc => {
+      const datum = new Date(doc.created_at).toLocaleDateString('nl-NL', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      })
+      return `
+        <tr>
+          <td>${escHtml(doc.titel)}</td>
+          <td><span class="klant-badge">${escHtml(doc.klant)}</span></td>
+          <td><span class="tijdstip">${datum}</span></td>
+          <td>
+            <button class="btn btn-danger btn-sm" onclick="verwijderDocument('${doc.id}', this)">
+              Verwijder
+            </button>
+          </td>
+        </tr>`
+    }).join('')
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Titel</th>
+            <th>Klant</th>
+            <th>Geüpload</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rijen}</tbody>
+      </table>`
+  }
+
+  // ── Verwijderen ───────────────────────────────────────────────────────────
+  async function verwijderDocument(id, knop) {
+    knop.disabled = true
+    knop.textContent = '…'
+
+    try {
+      const res = await fetch('/.netlify/functions/beheer-documenten', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
+      const data = await res.json()
+      if (data.fout) { knop.textContent = 'Fout'; knop.disabled = false; return }
+      laadDocumenten()
+    } catch (e) {
+      knop.textContent = 'Fout'
+      knop.disabled = false
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function toonFout(tekst) {
+    document.getElementById('tabel-container').innerHTML =
+      `<div class="fout-banner">${escHtml(tekst)}</div>`
+  }
+
+  function escHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  }
+
+  laadDocumenten()
+</script>
+</body>
+</html>

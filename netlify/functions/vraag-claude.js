@@ -1,3 +1,5 @@
+const { createClient } = require('@supabase/supabase-js')
+
 const CONFIG_MAP = {
   demo:   require('../../configs/demo.json'),
   kapper: require('../../configs/kapper.json')
@@ -14,7 +16,7 @@ const TOOL_LABELS = {
   contact: 'contactformulier invullen'
 }
 
-function bouwSystemPrompt(config) {
+function bouwSystemPrompt(config, contextChunks) {
   const tijden = Object.entries(config.openingstijden)
     .map(([dag, tijd]) => `  - ${dag}: ${tijd}`)
     .join('\n')
@@ -32,6 +34,10 @@ function bouwSystemPrompt(config) {
     ? `\nDe volgende functies zijn UITGESCHAKELD en mag je NOOIT aanbieden, ook niet als de klant erom vraagt:\n${uitgeschakeld}\nAls een klant vraagt naar een uitgeschakelde functie, zeg dan dat dit niet beschikbaar is via de chat.\n`
     : ''
 
+  const contextBlok = contextChunks?.length
+    ? `\nRelevante bedrijfsinformatie:\n${contextChunks.map(c => `---\n${c.content}`).join('\n')}\n---\nBaseer je antwoord op de verstrekte bedrijfsinformatie. Als de informatie het antwoord niet bevat, zeg dat je het niet weet.\n`
+    : ''
+
   return `Je bent een vriendelijke assistent voor ${config.bedrijfsnaam}, een ${config.type} bedrijf. ${config.beschrijving} Je helpt klanten met vragen en bestellingen. Spreek altijd Nederlands.
 
 Dit zijn de EXACTE openingstijden, gebruik deze letterlijk en verzin nooit andere tijden:
@@ -39,7 +45,7 @@ ${tijden}
 
 Noem ALLEEN de volgende diensten, verzin nooit andere diensten:
 ${diensten}
-${uitgeschakeldBlok}`
+${uitgeschakeldBlok}${contextBlok}`
 }
 
 function bouwTools(config) {
@@ -79,6 +85,43 @@ function apiHeaders() {
   }
 }
 
+// Haalt RAG-context op via OpenAI embeddings + Supabase similarity search.
+// Geeft lege array terug bij elke fout zodat de chatbot gewoon door kan.
+async function haalContext(klant, vraag) {
+  try {
+    if (!process.env.OPENAI_API_KEY || !process.env.SUPABASE_URL) return []
+
+    // Embedding genereren
+    const embeddingRes = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model:      'text-embedding-3-small',
+        input:      vraag,
+        dimensions: 384
+      })
+    })
+    const embeddingData = await embeddingRes.json()
+    const embedding = embeddingData.data?.[0]?.embedding
+    if (!embedding) return []
+
+    // Similarity search
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
+    const { data } = await supabase.rpc('zoek_documenten', {
+      query_embedding: embedding,
+      klant_naam:      klant,
+      aantal:          5
+    })
+
+    return data || []
+  } catch {
+    return []
+  }
+}
+
 exports.handler = async (event) => {
   try {
     const { geschiedenis, klant } = JSON.parse(event.body)
@@ -91,12 +134,16 @@ exports.handler = async (event) => {
       }
     }
 
+    // Haal RAG-context op op basis van de laatste user-vraag
+    const laasteVraag = [...geschiedenis].reverse().find(m => m.role === 'user')?.content || ''
+    const contextChunks = await haalContext(config.bedrijfsnaam, laasteVraag)
+
     const tools = bouwTools(config)
 
     const requestBody = {
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 500,
-      system: bouwSystemPrompt(config),
+      system: bouwSystemPrompt(config, contextChunks),
       messages: geschiedenis,
       ...(tools.length > 0 ? { tools } : {})
     }
@@ -135,7 +182,7 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
           max_tokens: 500,
-          system: bouwSystemPrompt(config),
+          system: bouwSystemPrompt(config, contextChunks),
           tools,
           messages: [
             ...geschiedenis,

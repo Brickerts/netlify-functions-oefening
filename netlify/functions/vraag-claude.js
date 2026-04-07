@@ -85,35 +85,17 @@ function apiHeaders() {
   }
 }
 
-// Haalt RAG-context op via OpenAI embeddings + Supabase similarity search.
+// Haalt RAG-context op via Supabase full-text search.
 // Geeft lege array terug bij elke fout zodat de chatbot gewoon door kan.
 async function haalContext(klant, vraag) {
   try {
-    if (!process.env.OPENAI_API_KEY || !process.env.SUPABASE_URL) return []
+    if (!process.env.SUPABASE_URL) return []
 
-    // Embedding genereren
-    const embeddingRes = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model:      'text-embedding-3-small',
-        input:      vraag,
-        dimensions: 384
-      })
-    })
-    const embeddingData = await embeddingRes.json()
-    const embedding = embeddingData.data?.[0]?.embedding
-    if (!embedding) return []
-
-    // Similarity search
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
     const { data } = await supabase.rpc('zoek_documenten', {
-      query_embedding: embedding,
-      klant_naam:      klant,
-      aantal:          5
+      zoek_query: vraag,
+      klant_naam: klant,
+      aantal:     5
     })
 
     return data || []

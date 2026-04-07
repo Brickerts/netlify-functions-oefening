@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1219;
+      --surface:   #1a2332;
+      --surface2:  #232f42;
+      --accent:    #3b82f6;
+      --text:      #e2e8f0;
+      --text-muted:#8899b0;
+      --radius:    16px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      max-width: 800px;
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -.3px; }
+    header p  { font-size: .85rem; color: var(--text-muted); margin-top: 4px; }
+
+    .nav-links { display: flex; gap: 16px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+    .nav-link  { font-size: .82rem; color: var(--accent); text-decoration: none; white-space: nowrap; opacity: .85; }
+    .nav-link:hover { opacity: 1; text-decoration: underline; }
+
+    main {
+      width: 100%;
+      max-width: 800px;
+      padding: 28px 20px 48px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Filter kaart ── */
+    .filter-kaart {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .filter-rij {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+
+    .form-veld label {
+      display: block;
+      font-size: .73rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      margin-bottom: 5px;
+    }
+
+    .form-veld select,
+    .form-veld input[type="date"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid transparent;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .9rem;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color .2s;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .form-veld select:focus,
+    .form-veld input:focus { border-color: var(--accent); }
+
+    .aangepast-rij {
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .aangepast-rij.zichtbaar { display: grid; }
+
+    /* ── Knoppen ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 10px 20px;
+      border-radius: 24px;
+      border: none;
+      font-size: .9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity .15s;
+      font-family: inherit;
+    }
+    .btn:hover    { opacity: .85; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary   { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface2); color: var(--text); }
+
+    .knop-rij { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Rapport output ── */
+    #rapport-sectie { display: none; flex-direction: column; gap: 16px; }
+
+    .rapport-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .meta-badge {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: .8rem;
+      color: var(--text-muted);
+    }
+
+    .meta-badge strong { color: var(--text); }
+
+    .rapport-tekst {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 24px 26px;
+      line-height: 1.8;
+      font-size: .93rem;
+      white-space: pre-wrap;
+      border-left: 3px solid var(--accent);
+    }
+
+    .rapport-acties { display: flex; gap: 10px; }
+
+    /* ── Fout ── */
+    .fout-banner {
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 10px;
+      padding: 14px 18px;
+      color: #fca5a5;
+      font-size: .9rem;
+      display: none;
+    }
+
+    @media (max-width: 480px) {
+      header, main { padding-left: 14px; padding-right: 14px; }
+      .aangepast-rij { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Rapport Dashboard</h1>
+    <p>AI-gegenereerde rapportages op basis van bestellingdata</p>
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Chatbot</a>
+    <a href="dashboard.html" class="nav-link">Bestellingen</a>
+    <a href="scanner.html" class="nav-link">Scanner</a>
+    <a href="leads.html" class="nav-link">Leads</a>
+    <a href="kennisbank.html" class="nav-link">Kennisbank</a>
+  </div>
+</header>
+
+<main>
+  <div class="filter-kaart">
+    <div class="filter-rij">
+      <div class="form-veld">
+        <label>Klant</label>
+        <select id="f-klant">
+          <option value="">Alle klanten</option>
+          <option value="Demo Café">Demo Café</option>
+          <option value="Stijlvol">Stijlvol</option>
+        </select>
+      </div>
+      <div class="form-veld">
+        <label>Periode</label>
+        <select id="f-periode" onchange="toggleAangepast()">
+          <option value="vandaag">Vandaag</option>
+          <option value="week" selected>Afgelopen 7 dagen</option>
+          <option value="maand">Afgelopen 30 dagen</option>
+          <option value="aangepast">Aangepaste periode</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="aangepast-rij" id="aangepast-rij">
+      <div class="form-veld">
+        <label>Van</label>
+        <input type="date" id="f-van">
+      </div>
+      <div class="form-veld">
+        <label>Tot en met</label>
+        <input type="date" id="f-tot">
+      </div>
+    </div>
+
+    <div class="knop-rij">
+      <button class="btn btn-primary" id="genereer-knop" onclick="genereerRapport()">
+        Rapport genereren
+      </button>
+    </div>
+  </div>
+
+  <div class="fout-banner" id="fout-banner"></div>
+
+  <div id="rapport-sectie">
+    <div class="rapport-meta" id="rapport-meta"></div>
+    <div class="rapport-tekst" id="rapport-tekst"></div>
+    <div class="rapport-acties">
+      <button class="btn btn-secondary" onclick="kopieerRapport()">Kopieer tekst</button>
+      <button class="btn btn-secondary" onclick="downloadRapport()">Download .txt</button>
+    </div>
+  </div>
+</main>
+
+<script>
+  function toggleAangepast() {
+    const periode = document.getElementById('f-periode').value
+    document.getElementById('aangepast-rij').classList.toggle('zichtbaar', periode === 'aangepast')
+  }
+
+  // Zet standaard datums voor aangepaste periode
+  const vandaag = new Date().toISOString().slice(0, 10)
+  const weekGeleden = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10)
+  document.getElementById('f-van').value = weekGeleden
+  document.getElementById('f-tot').value = vandaag
+
+  async function genereerRapport() {
+    const klant   = document.getElementById('f-klant').value
+    const periode = document.getElementById('f-periode').value
+    const vanDatum = document.getElementById('f-van').value
+    const totDatum = document.getElementById('f-tot').value
+    const knop    = document.getElementById('genereer-knop')
+    const fout    = document.getElementById('fout-banner')
+    const sectie  = document.getElementById('rapport-sectie')
+
+    if (periode === 'aangepast' && (!vanDatum || !totDatum)) {
+      toonFout('Vul beide datums in voor een aangepaste periode.')
+      return
+    }
+
+    fout.style.display = 'none'
+    sectie.style.display = 'none'
+    knop.disabled = true
+    knop.innerHTML = '<span class="spinner"></span> Rapport genereren…'
+
+    try {
+      const res = await fetch('/.netlify/functions/generate-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ klant: klant || null, periode, vanDatum, totDatum })
+      })
+      const data = await res.json()
+
+      if (data.fout) {
+        toonFout(data.fout)
+      } else {
+        toonRapport(data)
+      }
+    } catch (e) {
+      toonFout('Verbindingsfout: ' + e.message)
+    }
+
+    knop.disabled = false
+    knop.innerHTML = 'Rapport genereren'
+  }
+
+  function toonRapport(data) {
+    const sectie = document.getElementById('rapport-sectie')
+    const meta   = document.getElementById('rapport-meta')
+    const tekst  = document.getElementById('rapport-tekst')
+
+    const klantLabel = document.getElementById('f-klant').value || 'Alle klanten'
+
+    meta.innerHTML = `
+      <div class="meta-badge">Klant: <strong>${escHtml(klantLabel)}</strong></div>
+      <div class="meta-badge">Periode: <strong>${escHtml(data.periode)}</strong></div>
+      <div class="meta-badge">Bestellingen: <strong>${data.aantalBestellingen}</strong></div>`
+
+    tekst.textContent = data.rapport
+    sectie.style.display = 'flex'
+    sectie.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function toonFout(bericht) {
+    const el = document.getElementById('fout-banner')
+    el.textContent = bericht
+    el.style.display = 'block'
+  }
+
+  function kopieerRapport() {
+    navigator.clipboard.writeText(document.getElementById('rapport-tekst').textContent)
+  }
+
+  function downloadRapport() {
+    const tekst = document.getElementById('rapport-tekst').textContent
+    const blob  = new Blob([tekst], { type: 'text/plain' })
+    const url   = URL.createObjectURL(blob)
+    const a     = document.createElement('a')
+    a.href      = url
+    a.download  = `rapport-${new Date().toISOString().slice(0, 10)}.txt`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function escHtml(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  }
+</script>
+</body>
+</html>

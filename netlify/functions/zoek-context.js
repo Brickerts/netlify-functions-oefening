@@ -16,20 +16,43 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: JSON.stringify({ fout: 'klant en vraag zijn verplicht' }) }
     }
 
-    const { data, error } = await supabase().rpc('zoek_documenten', {
+    const sb = supabase()
+
+    // Poging 1: full-text search
+    const { data: ftsData, error: ftsError } = await sb.rpc('zoek_documenten', {
       zoek_query: vraag,
       klant_naam: klant,
       aantal:     5
     })
 
-    if (error) {
-      return { statusCode: 500, body: JSON.stringify({ fout: error.message }) }
+    if (ftsError) {
+      return { statusCode: 500, body: JSON.stringify({ fout: ftsError.message, stap: 'fts' }) }
+    }
+
+    if (ftsData && ftsData.length > 0) {
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chunks: ftsData, bron: 'fts' })
+      }
+    }
+
+    // Poging 2: fallback naar meest recente documenten
+    const { data: recentData, error: recentError } = await sb
+      .from('documenten')
+      .select('id, titel, content')
+      .eq('klant', klant)
+      .order('created_at', { ascending: false })
+      .limit(3)
+
+    if (recentError) {
+      return { statusCode: 500, body: JSON.stringify({ fout: recentError.message, stap: 'fallback' }) }
     }
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chunks: data || [] })
+      body: JSON.stringify({ chunks: recentData || [], bron: 'fallback' })
     }
   } catch (err) {
     return { statusCode: 500, body: JSON.stringify({ fout: err.message }) }

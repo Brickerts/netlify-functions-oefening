@@ -86,20 +86,43 @@ function apiHeaders() {
 }
 
 // Haalt RAG-context op via Supabase full-text search.
-// Geeft lege array terug bij elke fout zodat de chatbot gewoon door kan.
+// Fallback: als FTS geen resultaten geeft, haal de 3 meest recente documenten op.
+// Geeft lege array terug bij configuratiefouten zodat de chatbot door kan.
 async function haalContext(klant, vraag) {
-  try {
-    if (!process.env.SUPABASE_URL) return []
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) return []
 
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
-    const { data } = await supabase.rpc('zoek_documenten', {
+  const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
+
+  try {
+    // Poging 1: full-text search via RPC
+    const { data: ftsData, error: ftsError } = await sb.rpc('zoek_documenten', {
       zoek_query: vraag,
       klant_naam: klant,
       aantal:     5
     })
 
-    return data || []
-  } catch {
+    if (ftsError) {
+      console.error('[RAG] RPC fout:', ftsError.message)
+    } else if (ftsData && ftsData.length > 0) {
+      return ftsData
+    }
+
+    // Poging 2: geen FTS-match → meest recente 3 documenten als fallback
+    const { data: recentData, error: recentError } = await sb
+      .from('documenten')
+      .select('id, titel, content')
+      .eq('klant', klant)
+      .order('created_at', { ascending: false })
+      .limit(3)
+
+    if (recentError) {
+      console.error('[RAG] Fallback fout:', recentError.message)
+      return []
+    }
+
+    return recentData || []
+  } catch (err) {
+    console.error('[RAG] Onverwachte fout:', err.message)
     return []
   }
 }

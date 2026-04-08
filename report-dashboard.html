@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rapport Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -164,8 +165,28 @@
       padding: 24px 26px;
       line-height: 1.8;
       font-size: .93rem;
-      white-space: pre-wrap;
       border-left: 3px solid var(--accent);
+    }
+
+    .rapport-tekst h1, .rapport-tekst h2, .rapport-tekst h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 16px 0 6px;
+      color: var(--text);
+    }
+    .rapport-tekst h1:first-child,
+    .rapport-tekst h2:first-child { margin-top: 0; }
+    .rapport-tekst p  { margin-bottom: 10px; }
+    .rapport-tekst ul, .rapport-tekst ol {
+      padding-left: 20px;
+      margin-bottom: 10px;
+    }
+    .rapport-tekst li { margin-bottom: 4px; }
+    .rapport-tekst strong { color: var(--text); font-weight: 600; }
+    .rapport-tekst hr {
+      border: none;
+      border-top: 1px solid var(--surface2);
+      margin: 14px 0;
     }
 
     .rapport-acties { display: flex; gap: 10px; }
@@ -319,7 +340,8 @@
       <div class="meta-badge">Periode: <strong>${escHtml(data.periode)}</strong></div>
       <div class="meta-badge">Bestellingen: <strong>${data.aantalBestellingen}</strong></div>`
 
-    tekst.textContent = data.rapport
+    tekst.innerHTML = marked.parse(data.rapport)
+    tekst.dataset.raw = data.rapport
     sectie.style.display = 'flex'
     sectie.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -331,11 +353,11 @@
   }
 
   function kopieerRapport() {
-    navigator.clipboard.writeText(document.getElementById('rapport-tekst').textContent)
+    navigator.clipboard.writeText(document.getElementById('rapport-tekst').dataset.raw || '')
   }
 
   function downloadRapport() {
-    const tekst = document.getElementById('rapport-tekst').textContent
+    const tekst = document.getElementById('rapport-tekst').dataset.raw || ''
     const blob  = new Blob([tekst], { type: 'text/plain' })
     const url   = URL.createObjectURL(blob)
     const a     = document.createElement('a')

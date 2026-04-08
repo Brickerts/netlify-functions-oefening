@@ -70,18 +70,24 @@ exports.handler = async (event) => {
     const { klant, periode, vanDatum, totDatum } = JSON.parse(event.body)
     const { van, tot } = periodeNaarDatums(periode, vanDatum, totDatum)
 
+    console.log('[rapport] periode:', periode, '| van:', van, '| tot:', tot, '| klant:', klant || 'alle')
+
     let query = supabase()
       .from('bestellingen')
       .select('*')
       .gte('created_at', van)
       .lte('created_at', tot)
       .order('created_at', { ascending: true })
+      .limit(1000)
 
     if (klant) query = query.eq('klant', klant)
 
     const { data: bestellingen, error } = await query
+
+    console.log('[rapport] Supabase resultaat:', bestellingen?.length ?? 'null', 'rijen | fout:', error?.message ?? 'geen')
+
     if (error) {
-      return { statusCode: 500, body: JSON.stringify({ fout: error.message }) }
+      return { statusCode: 500, body: JSON.stringify({ fout: error.message, debug: { van, tot, klant } }) }
     }
 
     if (!bestellingen.length) {
@@ -142,7 +148,8 @@ ${JSON.stringify(bestellingen.slice(-50), null, 2)}
       body: JSON.stringify({
         rapport: data.content.find(b => b.type === 'text')?.text || '',
         aantalBestellingen: bestellingen.length,
-        periode: periodeLabel
+        periode: periodeLabel,
+        debug: { van, tot, klant: klant || 'alle' }
       })
     }
   } catch (err) {

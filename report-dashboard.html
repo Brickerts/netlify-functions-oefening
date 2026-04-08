@@ -338,7 +338,8 @@
     meta.innerHTML = `
       <div class="meta-badge">Klant: <strong>${escHtml(klantLabel)}</strong></div>
       <div class="meta-badge">Periode: <strong>${escHtml(data.periode)}</strong></div>
-      <div class="meta-badge">Bestellingen: <strong>${data.aantalBestellingen}</strong></div>`
+      <div class="meta-badge">Bestellingen: <strong>${data.aantalBestellingen}</strong></div>
+      ${data.debug ? `<div class="meta-badge" style="font-size:.72rem;color:var(--text-muted)">van: ${escHtml(data.debug.van)} · tot: ${escHtml(data.debug.tot)}</div>` : ''}`
 
     tekst.innerHTML = marked.parse(data.rapport)
     tekst.dataset.raw = data.rapport

@@ -178,7 +178,7 @@ exports.handler = async (event) => {
       fetch(`${process.env.URL}/.netlify/functions/sla-bestelling-op`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ klant: config.bedrijfsnaam, items, aantal })
+        body: JSON.stringify({ klant, items, aantal })
       }).catch(() => {})
 
       const res2 = await fetch(API_URL, {

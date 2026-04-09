@@ -1,0 +1,1 @@
+Haal alle bestellingen op uit Supabase van de afgelopen 7 dagen via MCP. Analyseer de data: totalen per item, piekuren, gemiddelde bestelling. Schrijf een zakelijk rapport in het Nederlands van 3-5 alinea's met 1 concrete aanbeveling.

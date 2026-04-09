@@ -22,15 +22,23 @@ configs/ — per-klant JSON (bedrijfsnaam, diensten, openingstijden, tools)
 - upload-document.js / beheer-documenten.js — RAG documenten beheer
 - zoek-context.js — RAG full-text search voor kennisbank
 - beheer-leads.js / genereer-reactivatie.js — lead reactivation
+- generate-report.js — AI rapport generatie op basis van bestellingen
 - debug-rag.js — RAG debugging hulp
 - hallo.js — test function
 
 ### Pagina's
-index.html (chat), scanner.html, dashboard.html, kennisbank.html, leads.html
+index.html (chat), scanner.html, dashboard.html, kennisbank.html, leads.html, report-dashboard.html
 
 ### Supabase tabellen
-- bestellingen — bestellingen via tool use (Realtime aan)
+- bestellingen — bestellingen via tool use
 - documenten — RAG kennisbank (full-text search, zoek_vector)
+- leads — lead reactivation met status tracking
+
+### MCP
+- Supabase MCP gekoppeld via https://mcp.supabase.com/mcp
+
+### Slash commands
+- /rapport — genereer zakelijk rapport van bestellingen afgelopen 7 dagen
 
 ## Regels
 - Altijd CJS (geen ESM) — streaming werkt niet met Netlify Dev

@@ -37,7 +37,7 @@ function bouwAnalyse(bestellingen) {
   const uurVerdeling = Array(24).fill(0)
 
   for (const b of bestellingen) {
-    const uur = new Date(b.created_at).getHours()
+    const uur = parseInt(new Date(b.created_at).toLocaleString('nl-NL', { timeZone: 'Europe/Amsterdam', hour: '2-digit', hour12: false }), 10)
     uurVerdeling[uur]++
 
     for (const r of (b.items || [])) {

@@ -6,7 +6,7 @@ White-label AI chatbot platform voor MKB. Eén codebase, meerdere klanten via co
 ## Stack
 - Netlify Functions (CJS, exports.handler)
 - Claude API (Haiku voor chat, Opus voor document scanning)
-- Supabase (bestellingen, documenten/RAG, RLS)
+- Supabase (bestellingen, documenten/RAG, leads, RLS)
 - Vanilla HTML/JS frontend, donker thema
 
 ## Architectuur
@@ -36,9 +36,13 @@ index.html (chat), scanner.html, dashboard.html, kennisbank.html, leads.html, re
 
 ### MCP
 - Supabase MCP gekoppeld via https://mcp.supabase.com/mcp
+- Subagents kunnen GEEN MCP tools gebruiken (permissie-beperking) — altijd hoofdgesprek gebruiken voor data queries
 
 ### Slash commands
-- /rapport — genereer zakelijk rapport van bestellingen afgelopen 7 dagen
+- /rapport — zakelijk rapport van bestellingen afgelopen 7 dagen
+- /status — compact overzicht: bestellingen, leads, documenten per klant
+- /klant-toevoegen [naam] — complete klant-setup: config JSON + CONFIG_MAP updates
+- /weekly-review — volledige weekly business review met analyse en actiepunten
 
 ## Regels
 - Altijd CJS (geen ESM) — streaming werkt niet met Netlify Dev
@@ -50,4 +54,4 @@ index.html (chat), scanner.html, dashboard.html, kennisbank.html, leads.html, re
 ## Deploy
 - netlify deploy --prod vanuit projectroot
 - Env vars op Netlify: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY
-- Live URL: mkb-chatbot.netlify.app
+- Live URL: mkb-chatbot.netlify.app (momenteel gepauzeerd — billing cycle reset 17 april)

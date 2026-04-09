@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env'), override: true });
 const { createClient } = require('@supabase/supabase-js')
 
 const CONFIG_MAP = {
@@ -13,7 +14,8 @@ function laadConfig(klant) {
 const TOOL_LABELS = {
   bestelling: 'bestellingen plaatsen',
   reservering: 'reserveringen maken',
-  contact: 'contactformulier invullen'
+  contact: 'contactformulier invullen',
+  afspraak: 'afspraken inplannen'
 }
 
 function bouwSystemPrompt(config, contextChunks) {
@@ -69,6 +71,23 @@ function bouwTools(config) {
           }
         },
         required: ['items', 'aantal']
+      }
+    })
+  }
+  if (config.tools.afspraak) {
+    tools.push({
+      name: 'plan_afspraak',
+      description: 'Gebruik dit wanneer een klant een afspraak wil maken. Verzamel naam, telefoonnummer, gewenste dienst, datum en tijd.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          naam_klant: { type: 'string', description: 'Volledige naam van de klant' },
+          telefoon:   { type: 'string', description: 'Telefoonnummer van de klant' },
+          dienst:     { type: 'string', description: 'Gewenste dienst, bijv. heren knipbeurt, baard trimmen' },
+          datum:      { type: 'string', description: 'Datum in YYYY-MM-DD formaat' },
+          tijd:       { type: 'string', description: 'Tijd in HH:MM formaat' }
+        },
+        required: ['naam_klant', 'dienst', 'datum', 'tijd']
       }
     })
   }
@@ -129,6 +148,9 @@ async function haalContext(klant, vraag) {
 
 exports.handler = async (event) => {
   try {
+    const key = process.env.ANTHROPIC_API_KEY || ''
+    console.log('[DEBUG] ANTHROPIC_API_KEY eerste 10 tekens:', key.slice(0, 10) || '(leeg!)')
+
     const { geschiedenis, klant } = JSON.parse(event.body)
 
     const config = laadConfig(klant)
@@ -169,6 +191,48 @@ exports.handler = async (event) => {
     }
 
     const toolBlock = data.content.find(b => b.type === 'tool_use')
+
+    if (toolBlock?.name === 'plan_afspraak') {
+      const { naam_klant, telefoon, dienst, datum, tijd } = toolBlock.input
+
+      fetch(`${process.env.URL}/.netlify/functions/beheer-afspraken`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ klant, naam_klant, telefoon, dienst, datum, tijd })
+      }).catch(() => {})
+
+      const bevestiging = `Afspraak ingepland: ${naam_klant} voor ${dienst} op ${datum} om ${tijd}`
+
+      const res2 = await fetch(API_URL, {
+        method: 'POST',
+        headers: apiHeaders(),
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 500,
+          system: bouwSystemPrompt(config, contextChunks),
+          tools,
+          messages: [
+            ...geschiedenis,
+            { role: 'assistant', content: data.content },
+            {
+              role: 'user',
+              content: [{
+                type: 'tool_result',
+                tool_use_id: toolBlock.id,
+                content: bevestiging
+              }]
+            }
+          ]
+        })
+      })
+
+      const data2 = await res2.json()
+      const tekst = data2.content?.find(b => b.type === 'text')?.text || 'Afspraak ingepland.'
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ antwoord: tekst, afspraak: { naam_klant, telefoon, dienst, datum, tijd } })
+      }
+    }
 
     if (toolBlock?.name === 'plaas_bestelling') {
       const { items, aantal } = toolBlock.input

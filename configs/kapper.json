@@ -11,6 +11,7 @@
   "tools": {
     "bestelling": false,
     "reservering": false,
-    "contact": true
+    "contact": true,
+    "afspraak": true
   }
 }

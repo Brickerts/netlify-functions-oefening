@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Afspraken Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1219;
+      --surface:   #1a2332;
+      --surface2:  #232f42;
+      --accent:    #3b82f6;
+      --green:     #22c55e;
+      --orange:    #f59e0b;
+      --red:       #ef4444;
+      --text:      #e2e8f0;
+      --text-muted:#8899b0;
+      --radius:    16px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      max-width: 960px;
+      padding: 24px 20px 16px;
+      border-bottom: 1px solid var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -.3px; }
+    header p  { font-size: .85rem; color: var(--text-muted); margin-top: 4px; }
+
+    .nav-links { display: flex; gap: 16px; align-items: center; flex-shrink: 0; }
+    .nav-link {
+      font-size: .82rem; color: var(--accent); text-decoration: none;
+      white-space: nowrap; opacity: .85;
+    }
+    .nav-link:hover { opacity: 1; text-decoration: underline; }
+
+    main {
+      width: 100%;
+      max-width: 960px;
+      padding: 24px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* ── Toolbar ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .filter-groep { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .filter-groep label { font-size: .85rem; color: var(--text-muted); }
+
+    select, input[type="date"] {
+      background: var(--surface);
+      border: 1px solid var(--surface2);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: .88rem;
+      padding: 7px 12px;
+      outline: none;
+      cursor: pointer;
+    }
+    select:focus, input[type="date"]:focus { border-color: var(--accent); }
+
+    .status-rij { display: flex; align-items: center; gap: 10px; font-size: .8rem; color: var(--text-muted); }
+    .refresh-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green);
+      animation: puls 2s ease-in-out infinite;
+    }
+    @keyframes puls { 0%, 100% { opacity: .4; } 50% { opacity: 1; } }
+
+    /* ── Stats ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .stat { background: var(--surface); border-radius: 12px; padding: 16px 18px; }
+    .stat-label { font-size: .72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; }
+    .stat-waarde { font-size: 1.6rem; font-weight: 700; margin-top: 4px; }
+
+    /* ── Tabel ── */
+    .tabel-wrapper { overflow-x: auto; border-radius: var(--radius); }
+
+    table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+
+    thead th {
+      background: var(--surface2);
+      color: var(--text-muted);
+      font-weight: 500;
+      font-size: .74rem;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 11px 16px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    tbody tr { transition: background .15s; }
+    tbody tr:hover td { background: var(--surface2); }
+
+    td {
+      background: var(--surface);
+      padding: 11px 16px;
+      border-top: 1px solid var(--bg);
+      vertical-align: middle;
+    }
+
+    /* ── Status badges ── */
+    .badge {
+      display: inline-block;
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+    .badge-gepland    { background: rgba(59,130,246,.15); color: #93c5fd; }
+    .badge-afgerond   { background: rgba(34,197,94,.15);  color: #86efac; }
+    .badge-geannuleerd{ background: rgba(239,68,68,.15);  color: #fca5a5; }
+    .badge-klant      { background: rgba(59,130,246,.12); color: var(--accent); }
+
+    /* ── Acties ── */
+    .acties { display: flex; gap: 6px; }
+
+    .btn-klein {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: .75rem;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn-klein:hover { opacity: .8; }
+    .btn-afgerond    { background: rgba(34,197,94,.2);  color: #86efac; }
+    .btn-annuleer    { background: rgba(239,68,68,.2);  color: #fca5a5; }
+
+    /* ── Leeg / laden / fout ── */
+    .leeg { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: .92rem; }
+    .laden {
+      text-align: center; padding: 40px 20px; color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--surface2);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .fout-banner {
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.3);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #fca5a5;
+      font-size: .88rem;
+    }
+
+    @media (max-width: 480px) {
+      header, main { padding-left: 14px; padding-right: 14px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Afspraken Dashboard</h1>
+    <p>Overzicht van alle ingeplande afspraken</p>
+  </div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Chatbot</a>
+    <a href="dashboard.html" class="nav-link">Bestellingen</a>
+    <a href="leads.html" class="nav-link">Leads</a>
+    <a href="kennisbank.html" class="nav-link">Kennisbank</a>
+    <a href="report-dashboard.html" class="nav-link">Rapporten</a>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="filter-groep">
+      <label for="klant-filter">Klant:</label>
+      <select id="klant-filter">
+        <option value="">Alle klanten</option>
+        <option value="kapper">Stijlvol (Kapper)</option>
+        <option value="demo">Demo Café</option>
+      </select>
+
+      <label for="datum-filter">Datum:</label>
+      <input type="date" id="datum-filter">
+
+      <label for="status-filter">Status:</label>
+      <select id="status-filter">
+        <option value="">Alle statussen</option>
+        <option value="gepland">Gepland</option>
+        <option value="afgerond">Afgerond</option>
+        <option value="geannuleerd">Geannuleerd</option>
+      </select>
+    </div>
+    <div class="status-rij">
+      <div class="refresh-dot"></div>
+      <span id="laatste-update">Laden…</span>
+    </div>
+  </div>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="tabel-wrapper" id="tabel-container">
+    <div class="laden"><div class="spinner"></div> Afspraken ophalen…</div>
+  </div>
+</main>
+
+<script>
+  const REFRESH_INTERVAL = 30000
+  let refreshTimer = null
+  let alleAfspraken = []
+
+  const klantFilter  = document.getElementById('klant-filter')
+  const datumFilter  = document.getElementById('datum-filter')
+  const statusFilter = document.getElementById('status-filter')
+
+  // URL-parameters terugzetten
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('klant'))  klantFilter.value  = params.get('klant')
+  if (params.get('datum'))  datumFilter.value  = params.get('datum')
+  if (params.get('status')) statusFilter.value = params.get('status')
+
+  ;[klantFilter, datumFilter, statusFilter].forEach(el => {
+    el.addEventListener('change', () => {
+      const url = new URL(window.location)
+      if (klantFilter.value)  url.searchParams.set('klant',  klantFilter.value)
+      else url.searchParams.delete('klant')
+      if (datumFilter.value)  url.searchParams.set('datum',  datumFilter.value)
+      else url.searchParams.delete('datum')
+      if (statusFilter.value) url.searchParams.set('status', statusFilter.value)
+      else url.searchParams.delete('status')
+      history.replaceState(null, '', url)
+      laadAfspraken()
+    })
+  })
+
+  async function laadAfspraken() {
+    try {
+      const qp = new URLSearchParams()
+      if (klantFilter.value)  qp.set('klant',  klantFilter.value)
+      if (datumFilter.value)  qp.set('datum',  datumFilter.value)
+      if (statusFilter.value) qp.set('status', statusFilter.value)
+
+      const qs = qp.toString() ? '?' + qp.toString() : ''
+      const res = await fetch(`/.netlify/functions/beheer-afspraken${qs}`)
+      const data = await res.json()
+
+      if (data.fout) { toonFout(data.fout); return }
+
+      alleAfspraken = data.afspraken || []
+      renderStats(alleAfspraken)
+      renderTabel(alleAfspraken)
+
+      document.getElementById('laatste-update').textContent =
+        'Bijgewerkt om ' + new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    } catch (e) {
+      toonFout('Verbindingsfout: ' + e.message)
+    }
+  }
+
+  function renderStats(afspraken) {
+    const vandaag = new Date().toISOString().slice(0, 10)
+    const gepland      = afspraken.filter(a => a.status === 'gepland').length
+    const vandaagAantal= afspraken.filter(a => a.datum === vandaag).length
+    const afgerond     = afspraken.filter(a => a.status === 'afgerond').length
+    const geannuleerd  = afspraken.filter(a => a.status === 'geannuleerd').length
+
+    document.getElementById('stats').innerHTML = `
+      <div class="stat"><div class="stat-label">Totaal</div><div class="stat-waarde">${afspraken.length}</div></div>
+      <div class="stat"><div class="stat-label">Vandaag</div><div class="stat-waarde">${vandaagAantal}</div></div>
+      <div class="stat"><div class="stat-label">Gepland</div><div class="stat-waarde" style="color:#93c5fd">${gepland}</div></div>
+      <div class="stat"><div class="stat-label">Afgerond</div><div class="stat-waarde" style="color:#86efac">${afgerond}</div></div>
+      <div class="stat"><div class="stat-label">Geannuleerd</div><div class="stat-waarde" style="color:#fca5a5">${geannuleerd}</div></div>`
+  }
+
+  function renderTabel(afspraken) {
+    const container = document.getElementById('tabel-container')
+
+    if (!afspraken.length) {
+      container.innerHTML = '<div class="leeg">Geen afspraken gevonden.</div>'
+      return
+    }
+
+    const rijen = afspraken.map(a => {
+      const badgeKlasse = a.status === 'afgerond' ? 'badge-afgerond'
+                        : a.status === 'geannuleerd' ? 'badge-geannuleerd'
+                        : 'badge-gepland'
+
+      const datumNl = new Date(a.datum + 'T00:00:00').toLocaleDateString('nl-NL', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
+      const tijdStr = a.tijd.slice(0, 5)
+
+      const acties = a.status === 'gepland' ? `
+        <div class="acties">
+          <button class="btn-klein btn-afgerond" onclick="updateStatus('${a.id}', 'afgerond')">Afgerond</button>
+          <button class="btn-klein btn-annuleer" onclick="updateStatus('${a.id}', 'geannuleerd')">Annuleer</button>
+        </div>` : '—'
+
+      return `
+        <tr>
+          <td><span class="badge badge-klant">${escHtml(a.klant)}</span></td>
+          <td>${escHtml(a.naam_klant)}<br><span style="font-size:.8rem;color:var(--text-muted)">${escHtml(a.telefoon || '—')}</span></td>
+          <td>${escHtml(a.dienst)}</td>
+          <td>${datumNl}<br><span style="font-size:.82rem;color:var(--text-muted)">${tijdStr}</span></td>
+          <td><span class="badge ${badgeKlasse}">${escHtml(a.status)}</span></td>
+          <td>${acties}</td>
+        </tr>`
+    }).join('')
+
+    container.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Klant</th>
+            <th>Naam / Telefoon</th>
+            <th>Dienst</th>
+            <th>Datum / Tijd</th>
+            <th>Status</th>
+            <th>Acties</th>
+          </tr>
+        </thead>
+        <tbody>${rijen}</tbody>
+      </table>`
+  }
+
+  async function updateStatus(id, nieuweStatus) {
+    try {
+      const res = await fetch('/.netlify/functions/beheer-afspraken', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: nieuweStatus })
+      })
+      const data = await res.json()
+      if (data.fout) { alert('Fout: ' + data.fout); return }
+      laadAfspraken()
+    } catch (e) {
+      alert('Verbindingsfout: ' + e.message)
+    }
+  }
+
+  function toonFout(tekst) {
+    document.getElementById('tabel-container').innerHTML =
+      `<div class="fout-banner">${escHtml(tekst)}</div>`
+  }
+
+  function escHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  }
+
+  laadAfspraken()
+  refreshTimer = setInterval(laadAfspraken, REFRESH_INTERVAL)
+</script>
+</body>
+</html>

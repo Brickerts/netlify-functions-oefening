@@ -6,7 +6,7 @@ White-label AI chatbot platform voor MKB. Eén codebase, meerdere klanten via co
 ## Stack
 - Netlify Functions (CJS, exports.handler)
 - Claude API (Haiku voor chat, Opus voor document scanning)
-- Supabase (bestellingen, documenten/RAG, leads, RLS)
+- Supabase (bestellingen, documenten/RAG, leads, afspraken, RLS)
 - Vanilla HTML/JS frontend, donker thema
 
 ## Architectuur
@@ -22,17 +22,19 @@ configs/ — per-klant JSON (bedrijfsnaam, diensten, openingstijden, tools)
 - upload-document.js / beheer-documenten.js — RAG documenten beheer
 - zoek-context.js — RAG full-text search voor kennisbank
 - beheer-leads.js / genereer-reactivatie.js — lead reactivation
+- beheer-afspraken.js — afspraken CRUD (GET/POST/PATCH/DELETE)
 - generate-report.js — AI rapport generatie op basis van bestellingen
 - debug-rag.js — RAG debugging hulp
 - hallo.js — test function
 
 ### Pagina's
-index.html (chat), scanner.html, dashboard.html, kennisbank.html, leads.html, report-dashboard.html
+index.html (chat), scanner.html, dashboard.html, kennisbank.html, leads.html, report-dashboard.html, afspraken-dashboard.html
 
 ### Supabase tabellen
 - bestellingen — bestellingen via tool use
 - documenten — RAG kennisbank (full-text search, zoek_vector)
 - leads — lead reactivation met status tracking
+- afspraken — afspraken via plan_afspraak tool (klant, naam_klant, telefoon, dienst, datum, tijd, status)
 
 ### MCP
 - Supabase MCP gekoppeld via https://mcp.supabase.com/mcp
@@ -49,6 +51,7 @@ index.html (chat), scanner.html, dashboard.html, kennisbank.html, leads.html, re
 - Configs bundelen via require() in CONFIG_MAP — fs.readFileSync werkt niet in productie
 - Nieuwe klant = JSON in configs/ + toevoegen aan CONFIG_MAP in vraag-claude.js en get-config.js
 - System prompt: exacte openingstijden + diensten uit config, uitgeschakelde tools expliciet verbieden
+- kapper config heeft afspraak: true → activeert plan_afspraak tool in vraag-claude.js
 - Commit messages in het Nederlands
 
 ## Deploy

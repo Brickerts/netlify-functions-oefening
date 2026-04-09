@@ -1,0 +1,1 @@
+Geef een kort statusoverzicht van het MKB chatbot platform. Check via MCP: hoeveel bestellingen, leads en documenten er in Supabase staan, per klant. Geef het als compacte tabel.

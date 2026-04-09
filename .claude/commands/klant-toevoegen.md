@@ -1,0 +1,1 @@
+Maak een nieuwe klant config aan voor $ARGUMENTS. Stappen: 1) Maak een JSON bestand in configs/ met bedrijfsnaam, diensten, openingstijden en beschikbare tools. 2) Voeg de config toe aan CONFIG_MAP in vraag-claude.js en get-config.js. 3) Toon wat er gedaan is zodat ik kan controleren.

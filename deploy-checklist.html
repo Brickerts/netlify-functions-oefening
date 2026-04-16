@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deploy Checklist — 17 april</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1219;
+      --surface:  #1a2332;
+      --surface2: #232f42;
+      --border:   #2a3a52;
+      --accent:   #3b82f6;
+      --green:    #22c55e;
+      --text:     #e2e8f0;
+      --muted:    #8899b0;
+      --radius:   12px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100dvh;
+      padding: 40px 20px 80px;
+    }
+
+    .page { max-width: 680px; margin: 0 auto; }
+
+    /* ── Header ── */
+    .header { margin-bottom: 36px; }
+    .header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -.3px; }
+    .header p  { font-size: .88rem; color: var(--muted); margin-top: 6px; }
+
+    .progress-wrap { margin-top: 20px; }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .8rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .progress-bar {
+      background: var(--surface2);
+      border-radius: 100px;
+      height: 8px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--green));
+      border-radius: 100px;
+      transition: width .4s ease;
+    }
+
+    /* ── Section ── */
+    .sectie { margin-bottom: 28px; }
+
+    .sectie-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border-radius: var(--radius) var(--radius) 0 0;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      gap: 12px;
+    }
+
+    .sectie-header:hover { background: #2a3a52; }
+
+    .sectie-titel {
+      font-size: .9rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .sectie-num {
+      width: 24px; height: 24px;
+      background: rgba(59,130,246,.15);
+      color: var(--accent);
+      border-radius: 6px;
+      font-size: .75rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .sectie-count {
+      font-size: .75rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .sectie-count.klaar { color: var(--green); }
+
+    .chevron {
+      width: 16px; height: 16px;
+      color: var(--muted);
+      transition: transform .2s;
+      flex-shrink: 0;
+    }
+    .sectie.open .chevron { transform: rotate(180deg); }
+
+    .sectie-body {
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      overflow: hidden;
+      display: none;
+    }
+    .sectie.open .sectie-body { display: block; }
+
+    /* ── Item ── */
+    .item {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 13px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background .15s;
+    }
+    .item:last-child { border-bottom: none; }
+    .item:hover { background: var(--surface2); }
+    .item.checked { opacity: .55; }
+
+    .item-check {
+      width: 20px; height: 20px;
+      border-radius: 6px;
+      border: 2px solid var(--border);
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+      transition: background .15s, border-color .15s;
+    }
+
+    .item.checked .item-check {
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .item-check svg { display: none; }
+    .item.checked .item-check svg { display: block; }
+
+    .item-label {
+      font-size: .88rem;
+      line-height: 1.5;
+      flex: 1;
+    }
+    .item.checked .item-label {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+
+    /* ── Acties ── */
+    .acties {
+      display: flex;
+      gap: 10px;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-size: .83rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-danger {
+      background: rgba(239,68,68,.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239,68,68,.25);
+    }
+
+    /* ── Voltooiing ── */
+    .klaar-banner {
+      display: none;
+      background: rgba(34,197,94,.1);
+      border: 1px solid rgba(34,197,94,.25);
+      border-radius: var(--radius);
+      padding: 20px;
+      text-align: center;
+      margin-top: 28px;
+    }
+    .klaar-banner.zichtbaar { display: block; }
+    .klaar-banner .emoji { font-size: 2rem; margin-bottom: 8px; }
+    .klaar-banner p { font-size: .9rem; color: #86efac; font-weight: 600; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <h1>🚀 Deploy Checklist</h1>
+    <p>17 april — MKB AI Platform · mkb-chatbot.netlify.app</p>
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="progress-tekst">0 van 0 voltooid</span>
+        <span id="progress-pct">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="checklist"></div>
+
+  <div class="acties">
+    <button class="btn btn-ghost" onclick="allesUitklappen()">Alles uitklappen</button>
+    <button class="btn btn-ghost" onclick="allesDichtklappen()">Alles sluiten</button>
+    <button class="btn btn-danger" onclick="resetChecklist()">Reset alles</button>
+  </div>
+
+  <div class="klaar-banner" id="klaar-banner">
+    <div class="emoji">🎉</div>
+    <p>Alle checks voltooid — klaar voor deploy!</p>
+  </div>
+
+</div>
+
+<script>
+const STORAGE_KEY = 'deploy-checklist-17-april'
+
+const DATA = [
+  {
+    id: 'env',
+    titel: 'Netlify env vars',
+    items: [
+      'ANTHROPIC_API_KEY aanwezig',
+      'SUPABASE_URL aanwezig',
+      'SUPABASE_ANON_KEY aanwezig'
+    ]
+  },
+  {
+    id: 'pages',
+    titel: 'Pages testen (na deploy)',
+    items: [
+      '/ of /landing.html — laadt correct, geen broken images',
+      '/index.html (chatbot demo) — ?klant=demo werkt',
+      '/index.html?klant=kapper — kapper config laadt',
+      '/scanner.html — upload + scan werkt',
+      '/dashboard.html — orders laden uit Supabase',
+      '/leads.html — leads zichtbaar, AI-berichten genereren',
+      '/kennisbank.html — zoeken geeft resultaten'
+    ]
+  },
+  {
+    id: 'functions',
+    titel: 'Netlify Functions testen',
+    items: [
+      'vraag-claude.js — chatbot reageert',
+      'tool use — plan_afspraak wordt aangeroepen',
+      'generate-report.js — rapport wordt gegenereerd',
+      'api_usage logging — schrijft naar Supabase na elke call'
+    ]
+  },
+  {
+    id: 'ratelimit',
+    titel: 'Rate limiting',
+    items: [
+      'Meer dan X calls in korte tijd → foutmelding (geen crash)'
+    ]
+  },
+  {
+    id: 'landing',
+    titel: 'Landing page',
+    items: [
+      'CTA-knop linkt naar juiste demo URL',
+      'Contactformulier/mailto werkt',
+      'Mobiel getest (Chrome DevTools)'
+    ]
+  },
+  {
+    id: 'git',
+    titel: 'Git & Deploy',
+    items: [
+      'Alles gecommit en gepusht vóór deploy',
+      'netlify deploy --prod uitgevoerd',
+      'Deploy URL gecontroleerd in Netlify dashboard'
+    ]
+  }
+]
+
+// State laden
+function laadState() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {} }
+  catch { return {} }
+}
+
+function slaState(state) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+}
+
+function itemId(sectieId, index) {
+  return `${sectieId}-${index}`
+}
+
+function render() {
+  const state = laadState()
+  const container = document.getElementById('checklist')
+  container.innerHTML = ''
+
+  DATA.forEach((sectie, si) => {
+    const aantalKlaar = sectie.items.filter((_, i) => state[itemId(sectie.id, i)]).length
+    const allesKlaar  = aantalKlaar === sectie.items.length
+    const isOpen      = state[`open-${sectie.id}`] !== false // default open
+
+    const div = document.createElement('div')
+    div.className = 'sectie' + (isOpen ? ' open' : '')
+    div.innerHTML = `
+      <div class="sectie-header" onclick="toggleSectie('${sectie.id}')">
+        <div class="sectie-titel">
+          <div class="sectie-num">${si + 1}</div>
+          ${sectie.titel}
+        </div>
+        <span class="sectie-count ${allesKlaar ? 'klaar' : ''}">${aantalKlaar}/${sectie.items.length}</span>
+        <svg class="chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 8l5 5 5-5"/>
+        </svg>
+      </div>
+      <div class="sectie-body">
+        ${sectie.items.map((tekst, i) => {
+          const id = itemId(sectie.id, i)
+          const checked = !!state[id]
+          return `
+            <div class="item ${checked ? 'checked' : ''}" onclick="toggleItem('${sectie.id}', ${i})">
+              <div class="item-check">
+                <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                  <path d="M1 5l3.5 3.5L11 1" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <span class="item-label">${tekst}</span>
+            </div>`
+        }).join('')}
+      </div>
+    `
+    container.appendChild(div)
+  })
+
+  updateProgress(state)
+}
+
+function updateProgress(state) {
+  const totaal = DATA.reduce((s, sec) => s + sec.items.length, 0)
+  const klaar  = DATA.reduce((s, sec) =>
+    s + sec.items.filter((_, i) => state[itemId(sec.id, i)]).length, 0)
+  const pct = totaal ? Math.round((klaar / totaal) * 100) : 0
+
+  document.getElementById('progress-tekst').textContent = `${klaar} van ${totaal} voltooid`
+  document.getElementById('progress-pct').textContent   = `${pct}%`
+  document.getElementById('progress-fill').style.width  = pct + '%'
+
+  const banner = document.getElementById('klaar-banner')
+  banner.classList.toggle('zichtbaar', klaar === totaal && totaal > 0)
+}
+
+function toggleItem(sectieId, index) {
+  const state = laadState()
+  const id = itemId(sectieId, index)
+  state[id] = !state[id]
+  slaState(state)
+  render()
+}
+
+function toggleSectie(sectieId) {
+  const state = laadState()
+  const key = `open-${sectieId}`
+  state[key] = state[key] === false ? true : false
+  slaState(state)
+  render()
+}
+
+function allesUitklappen() {
+  const state = laadState()
+  DATA.forEach(s => { state[`open-${s.id}`] = true })
+  slaState(state)
+  render()
+}
+
+function allesDichtklappen() {
+  const state = laadState()
+  DATA.forEach(s => { state[`open-${s.id}`] = false })
+  slaState(state)
+  render()
+}
+
+function resetChecklist() {
+  if (!confirm('Weet je zeker dat je alle vinkjes wil wissen?')) return
+  const state = laadState()
+  // Behoud open/dicht state, wis alleen checkboxes
+  DATA.forEach(s => s.items.forEach((_, i) => { delete state[itemId(s.id, i)] }))
+  slaState(state)
+  render()
+}
+
+render()
+</script>
+</body>
+</html>

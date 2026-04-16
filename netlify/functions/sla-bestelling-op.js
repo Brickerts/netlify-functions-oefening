@@ -1,30 +1,25 @@
 const { createClient } = require('@supabase/supabase-js')
+const { ok, fail, parseBody, requireFields, asyncHandler } = require('./_utils')
 
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ fout: 'Method not allowed' }) }
-  }
+exports.handler = asyncHandler(async (event) => {
+  if (event.httpMethod !== 'POST') return fail('Method not allowed', 405)
 
-  try {
-    const { klant, items, aantal } = JSON.parse(event.body)
+  const body = parseBody(event)
+  requireFields(body, ['klant', 'items', 'aantal'])
+  const { klant, items, aantal } = body
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY
-    )
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+  )
 
-    const regels = items.map((item, i) => ({ item, aantal: aantal[i] }))
+  const regels = items.map((item, i) => ({ item, aantal: aantal[i] }))
 
-    const { error } = await supabase
-      .from('bestellingen')
-      .insert({ klant, items: regels })
+  const { error } = await supabase
+    .from('bestellingen')
+    .insert({ klant, items: regels })
 
-    if (error) {
-      return { statusCode: 500, body: JSON.stringify({ fout: error.message }) }
-    }
+  if (error) return fail(error.message)
 
-    return { statusCode: 200, body: JSON.stringify({ opgeslagen: true }) }
-  } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ fout: err.message }) }
-  }
-}
+  return ok({ opgeslagen: true })
+})

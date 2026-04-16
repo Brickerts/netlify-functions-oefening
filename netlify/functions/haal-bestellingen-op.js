@@ -1,35 +1,25 @@
 const { createClient } = require('@supabase/supabase-js')
+const { ok, fail, asyncHandler } = require('./_utils')
 
-exports.handler = async (event) => {
-  try {
-    const klantFilter = event.queryStringParameters?.klant || null
+exports.handler = asyncHandler(async (event) => {
+  const klantFilter = event.queryStringParameters?.klant || null
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_ANON_KEY
-    )
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+  )
 
-    let query = supabase
-      .from('bestellingen')
-      .select('*')
-      .order('created_at', { ascending: false })
+  let query = supabase
+    .from('bestellingen')
+    .select('*')
+    .order('created_at', { ascending: false })
 
-    if (klantFilter) {
-      query = query.eq('klant', klantFilter)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      return { statusCode: 500, body: JSON.stringify({ fout: error.message }) }
-    }
-
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bestellingen: data })
-    }
-  } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ fout: err.message }) }
+  if (klantFilter) {
+    query = query.eq('klant', klantFilter)
   }
-}
+
+  const { data, error } = await query
+  if (error) return fail(error.message)
+
+  return ok({ bestellingen: data })
+})

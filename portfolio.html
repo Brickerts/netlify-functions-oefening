@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rick Sieders — Brickerts · Freelance Developer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1219;
+      --bg2:       #101820;
+      --surface:   #1a2332;
+      --surface2:  #232f42;
+      --border:    #2a3a52;
+      --accent:    #3b82f6;
+      --accent2:   #60a5fa;
+      --text:      #e2e8f0;
+      --text-muted:#8899b0;
+      --radius:    16px;
+      --max:       1100px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(13,18,25,.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: -.3px;
+    }
+    .nav-logo span { color: var(--accent); }
+
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      font-size: .85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #fff !important;
+      padding: 7px 18px;
+      border-radius: 8px;
+      font-size: .85rem !important;
+      font-weight: 600 !important;
+      transition: background .2s !important;
+    }
+    .nav-cta:hover { background: #2563eb !important; }
+
+    /* ── HAMBURGER ── */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+    }
+    .hamburger span {
+      display: block;
+      width: 22px; height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: transform .2s, opacity .2s;
+    }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .nav-mobile {
+      display: none;
+      position: fixed;
+      top: 60px; left: 0; right: 0;
+      background: rgba(13,18,25,.97);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px 24px;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 99;
+    }
+    .nav-mobile.open { display: flex; }
+    .nav-mobile a {
+      font-size: .95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      transition: color .2s;
+    }
+    .nav-mobile a:last-child { border-bottom: none; }
+    .nav-mobile a:hover { color: var(--text); }
+    .nav-mobile .nav-cta {
+      text-align: center;
+      padding: 13px;
+      margin-top: 8px;
+      border-bottom: none;
+      border-radius: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .hamburger { display: flex; }
+      .nav-links { display: none; }
+    }
+
+    /* ── SECTIONS ── */
+    section { width: 100%; padding: 100px 24px; }
+    .container { max-width: var(--max); margin: 0 auto; }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding-top: 120px;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(59,130,246,.18) 0%, transparent 70%),
+        var(--bg);
+    }
+
+    .hero-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 24px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(59,130,246,.12);
+      border: 1px solid rgba(59,130,246,.25);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--accent2);
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: puls 2s ease-in-out infinite;
+    }
+    @keyframes puls { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+    .hero-naam {
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -.5px;
+      line-height: 1.1;
+    }
+    .hero-naam .highlight {
+      background: linear-gradient(135deg, #3b82f6, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-tagline {
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      color: var(--text-muted);
+      max-width: 540px;
+      line-height: 1.7;
+    }
+
+    .hero-sub {
+      font-size: .95rem;
+      color: var(--text-muted);
+      max-width: 460px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      padding: 13px 28px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: .95rem;
+      transition: background .2s, transform .15s;
+      display: inline-block;
+    }
+    .btn-primary:hover { background: #2563eb; transform: translateY(-1px); }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      padding: 13px 28px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: .95rem;
+      border: 1px solid var(--border);
+      transition: background .2s, transform .15s;
+      display: inline-block;
+    }
+    .btn-secondary:hover { background: var(--surface2); transform: translateY(-1px); }
+
+    .btn-sm {
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: .83rem;
+      font-weight: 600;
+      display: inline-block;
+      transition: background .2s, transform .15s;
+    }
+    .btn-sm:hover { transform: translateY(-1px); }
+
+    /* ── SECTION HEADER ── */
+    .section-header { text-align: center; margin-bottom: 56px; }
+    .section-tag {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: -.3px;
+      line-height: 1.2;
+    }
+    .section-sub {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-top: 12px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .divider {
+      width: 40px; height: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+      margin: 20px auto 0;
+    }
+
+    /* ── OVER MIJ ── */
+    #over { background: var(--bg2); }
+
+    .over-inner {
+      display: flex;
+      align-items: center;
+      gap: 60px;
+    }
+
+    .over-avatar {
+      width: 100px; height: 100px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(59,130,246,.3), rgba(129,140,248,.3));
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      flex-shrink: 0;
+    }
+
+    .over-tekst p {
+      font-size: 1rem;
+      color: var(--text-muted);
+      line-height: 1.8;
+      max-width: 620px;
+    }
+
+    .over-tekst p + p { margin-top: 12px; }
+
+    .over-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .tag {
+      background: rgba(59,130,246,.1);
+      border: 1px solid rgba(59,130,246,.2);
+      color: var(--accent2);
+      border-radius: 100px;
+      padding: 4px 14px;
+      font-size: .78rem;
+      font-weight: 600;
+    }
+
+    @media (max-width: 640px) {
+      .over-inner { flex-direction: column; gap: 24px; text-align: center; }
+      .over-tags { justify-content: center; }
+    }
+
+    /* ── WAT IK MAAK ── */
+    #diensten { background: var(--bg); }
+
+    .diensten-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    @media (max-width: 700px) {
+      .diensten-grid { grid-template-columns: 1fr; }
+    }
+
+    .dienst-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color .2s, transform .2s;
+    }
+    .dienst-card:hover {
+      border-color: rgba(59,130,246,.4);
+      transform: translateY(-3px);
+    }
+
+    .dienst-icon {
+      font-size: 2rem;
+    }
+
+    .dienst-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+    }
+
+    .dienst-desc {
+      font-size: .88rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      flex: 1;
+    }
+
+    .dienst-items {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-top: 4px;
+    }
+    .dienst-items li {
+      font-size: .83rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dienst-items li::before {
+      content: '→';
+      color: var(--accent);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── PROJECTEN ── */
+    #projecten { background: var(--bg2); }
+
+    .projecten-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 18px;
+    }
+
+    .project-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color .2s, transform .2s;
+    }
+    .project-card:hover {
+      border-color: rgba(59,130,246,.35);
+      transform: translateY(-2px);
+    }
+
+    .project-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .project-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .project-naam {
+      font-weight: 700;
+      font-size: .95rem;
+    }
+
+    .project-desc {
+      font-size: .85rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .project-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    .project-label {
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    /* ── CONTACT ── */
+    #contact {
+      background: var(--bg);
+      text-align: center;
+    }
+
+    .contact-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .contact-btns {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .contact-note {
+      font-size: .85rem;
+      color: var(--text-muted);
+    }
+    .contact-note strong { color: var(--text); font-weight: 600; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 36px 24px;
+    }
+    .footer-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .footer-logo { font-weight: 800; font-size: .95rem; }
+    .footer-logo span { color: var(--accent); }
+    .footer-copy { font-size: .78rem; color: var(--text-muted); }
+
+    /* ── FADE-IN ── */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity .55s ease, transform .55s ease;
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+    .fade-up-delay-1 { transition-delay: .1s; }
+    .fade-up-delay-2 { transition-delay: .2s; }
+    .fade-up-delay-3 { transition-delay: .3s; }
+    .fade-up-delay-4 { transition-delay: .4s; }
+    .fade-up-delay-5 { transition-delay: .5s; }
+    .fade-up-delay-6 { transition-delay: .6s; }
+    .fade-up-delay-7 { transition-delay: .7s; }
+    .fade-up-delay-8 { transition-delay: .8s; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo"><span>Rick</span> Sieders</div>
+  <div class="nav-links">
+    <a href="#over">Over mij</a>
+    <a href="#diensten">Wat ik maak</a>
+    <a href="#projecten">Projecten</a>
+    <a href="#contact" class="nav-cta">Contact</a>
+  </div>
+  <button class="hamburger" id="hamburger" aria-label="Menu openen">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- MOBIEL MENU -->
+<div class="nav-mobile" id="nav-mobile">
+  <a href="#over" onclick="sluitMenu()">Over mij</a>
+  <a href="#diensten" onclick="sluitMenu()">Wat ik maak</a>
+  <a href="#projecten" onclick="sluitMenu()">Projecten</a>
+  <a href="#contact" class="nav-cta" onclick="sluitMenu()">Contact</a>
+</div>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-badge">Freelance Developer · Brickerts</div>
+      <h1 class="hero-naam">
+        Rick Sieders<br>
+        <span class="highlight">Brickerts</span>
+      </h1>
+      <p class="hero-tagline">
+        Ik bouw websites, AI tools en automatisering voor het MKB.
+      </p>
+      <p class="hero-sub">
+        Directe samenwerking, geen groot bureau. Van idee naar werkend product.
+      </p>
+      <a href="#projecten" class="btn-primary">Bekijk mijn werk</a>
+    </div>
+  </div>
+</section>
+
+<!-- OVER MIJ -->
+<section id="over">
+  <div class="container">
+    <div class="over-inner fade-up">
+      <div class="over-avatar">👨‍💻</div>
+      <div class="over-tekst">
+        <p>
+          Ik ben Rick Sieders, freelance developer uit Alblasserdam. Ik bouw voor horeca, retail en events — bedrijven die willen groeien zonder ingewikkelde software of duur IT-team.
+        </p>
+        <p>
+          Je werkt direct met mij samen. Geen tussenpersonen, geen lang traject. Ik stel in, test en lever op.
+        </p>
+        <div class="over-tags">
+          <span class="tag">Alblasserdam</span>
+          <span class="tag">Horeca</span>
+          <span class="tag">Retail</span>
+          <span class="tag">Events</span>
+          <span class="tag">MKB</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WAT IK MAAK -->
+<section id="diensten">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-tag">Diensten</div>
+      <h2 class="section-title">Wat ik maak</h2>
+      <div class="divider"></div>
+    </div>
+    <div class="diensten-grid">
+      <div class="dienst-card fade-up fade-up-delay-1">
+        <div class="dienst-icon">🌐</div>
+        <div class="dienst-title">Websites</div>
+        <p class="dienst-desc">Professionele bedrijfswebsites die snel laden en er goed uitzien op elk apparaat.</p>
+        <ul class="dienst-items">
+          <li>Zakelijke websites</li>
+          <li>Landingspagina's</li>
+          <li>Snel en mobielvriendelijk</li>
+        </ul>
+      </div>
+      <div class="dienst-card fade-up fade-up-delay-2">
+        <div class="dienst-icon">🤖</div>
+        <div class="dienst-title">AI Tools</div>
+        <p class="dienst-desc">Slimme tools die werk overnemen — van klantvragen beantwoorden tot facturen verwerken.</p>
+        <ul class="dienst-items">
+          <li>Chatbots op maat</li>
+          <li>Document scanners</li>
+          <li>Dashboards en rapportages</li>
+          <li>Lead reactivation</li>
+        </ul>
+      </div>
+      <div class="dienst-card fade-up fade-up-delay-3">
+        <div class="dienst-icon">⚙️</div>
+        <div class="dienst-title">Automatisering</div>
+        <p class="dienst-desc">Workflows die repetitieve taken overnemen zodat jij je kunt focussen op je bedrijf.</p>
+        <ul class="dienst-items">
+          <li>Bestellingen verwerken</li>
+          <li>Afspraken inplannen</li>
+          <li>Notificaties en koppelingen</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE PROJECTEN -->
+<section id="projecten">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-tag">Live demos</div>
+      <h2 class="section-title">Projecten & demos</h2>
+      <p class="section-sub">Alles hieronder draait live — klik en probeer het zelf.</p>
+      <div class="divider"></div>
+    </div>
+    <div class="projecten-grid">
+
+      <div class="project-card fade-up fade-up-delay-1">
+        <div class="project-header">
+          <div class="project-dot"></div>
+          <div class="project-naam">AI Chatbot Demo</div>
+        </div>
+        <p class="project-desc">Chatbot die vragen beantwoordt, afspraken plant en bestellingen opneemt.</p>
+        <div class="project-footer">
+          <span class="project-label">AI Tools</span>
+          <a href="/index.html" class="btn-sm btn-secondary">Bekijk demo →</a>
+        </div>
+      </div>
+
+      <div class="project-card fade-up fade-up-delay-2">
+        <div class="project-header">
+          <div class="project-dot"></div>
+          <div class="project-naam">Kapper Chatbot</div>
+        </div>
+        <p class="project-desc">Chatbot variant voor een kapsalon — afspraken inplannen via de chat.</p>
+        <div class="project-footer">
+          <span class="project-label">AI Tools</span>
+          <a href="/?klant=kapper" class="btn-sm btn-secondary">Bekijk demo →</a>
+        </div>
+      </div>
+
+      <div class="project-card fade-up fade-up-delay-3">
+        <div class="project-header">
+          <div class="project-dot"></div>
+          <div class="project-naam">Document Scanner</div>
+        </div>
+        <p class="project-desc">Upload een factuur of bon, AI extraheert automatisch alle data.</p>
+        <div class="project-footer">
+          <span class="project-label">AI Tools</span>
+          <a href="/scanner.html" class="btn-sm btn-secondary">Bekijk demo →</a>
+        </div>
+      </div>
+
+      <div class="project-card fade-up fade-up-delay-4">
+        <div class="project-header">
+          <div class="project-dot"></div>
+          <div class="project-naam">Bestellingen Dashboard</div>
+        </div>
+        <p class="project-desc">Live overzicht van orders die via de chatbot zijn binnengekomen.</p>
+        <div class="project-footer">
+          <span class="project-label">Automatisering</span>
+          <a href="/dashboard.html" class="btn-sm btn-secondary">Bekijk demo →</a>
+        </div>
+      </div>
+
+      <div class="project-card fade-up fade-up-delay-5">
+        <div class="project-header">
+          <div class="project-dot"></div>
+          <div class="project-naam">Lead Reactivatie</div>
+        </div>
+        <p class="project-desc">Slapende klanten identificeren en gepersonaliseerde AI-berichten genereren.</p>
+        <div class="project-footer">
+          <span class="project-label">AI Tools</span>
+          <a href="/leads.html" class="btn-sm btn-secondary">Bekijk demo →</a>
+        </div>
+      </div>
+
+      <div class="project-card fade-up fade-up-delay-6">
+        <div class="project-header">
+          <div class="project-dot"></div>
+          <div class="project-naam">RAG Kennisbank</div>
+        </div>
+        <p class="project-desc">Chatbot die antwoord geeft op basis van jouw eigen bedrijfsdocumenten.</p>
+        <div class="project-footer">
+          <span class="project-label">AI Tools</span>
+          <a href="/kennisbank.html" class="btn-sm btn-secondary">Bekijk demo →</a>
+        </div>
+      </div>
+
+      <div class="project-card fade-up fade-up-delay-7">
+        <div class="project-header">
+          <div class="project-dot"></div>
+          <div class="project-naam">Afspraken Dashboard</div>
+        </div>
+        <p class="project-desc">Afsprakenbeheer gekoppeld aan de chatbot — filteren, bevestigen, annuleren.</p>
+        <div class="project-footer">
+          <span class="project-label">Automatisering</span>
+          <a href="/afspraken-dashboard.html" class="btn-sm btn-secondary">Bekijk demo →</a>
+        </div>
+      </div>
+
+      <div class="project-card fade-up fade-up-delay-8">
+        <div class="project-header">
+          <div class="project-dot"></div>
+          <div class="project-naam">Rapportage Dashboard</div>
+        </div>
+        <p class="project-desc">AI-gegenereerde zakelijke rapporten met piekuren, trends en aanbevelingen.</p>
+        <div class="project-footer">
+          <span class="project-label">AI Tools</span>
+          <a href="/report-dashboard.html" class="btn-sm btn-secondary">Bekijk demo →</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="container">
+    <div class="contact-inner fade-up">
+      <div class="section-tag">Contact</div>
+      <h2 class="section-title">Interesse? Stuur een bericht.</h2>
+      <p class="section-sub">Heb je een idee, een vraag of wil je weten wat ik voor jouw bedrijf kan doen? Ik reageer snel.</p>
+      <div class="contact-btns">
+        <a href="mailto:ricksieders@gmail.com" class="btn-primary">ricksieders@gmail.com</a>
+      </div>
+      <p class="contact-note">Website: <strong>chatrick.nl</strong> (binnenkort live)</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo"><span>Rick</span> Sieders — Brickerts</div>
+    <div class="footer-copy">© 2026 Brickerts · Alblasserdam</div>
+  </div>
+</footer>
+
+<script>
+  // Fade-in animaties
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible')
+        observer.unobserve(entry.target)
+      }
+    })
+  }, { threshold: 0.1 })
+
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el))
+
+  // Hamburger menu
+  const hamburger = document.getElementById('hamburger')
+  const navMobile = document.getElementById('nav-mobile')
+
+  hamburger.addEventListener('click', () => {
+    const isOpen = navMobile.classList.toggle('open')
+    hamburger.classList.toggle('open', isOpen)
+    hamburger.setAttribute('aria-label', isOpen ? 'Menu sluiten' : 'Menu openen')
+  })
+
+  function sluitMenu() {
+    navMobile.classList.remove('open')
+    hamburger.classList.remove('open')
+    hamburger.setAttribute('aria-label', 'Menu openen')
+  }
+
+  document.addEventListener('click', (e) => {
+    if (!hamburger.contains(e.target) && !navMobile.contains(e.target)) {
+      sluitMenu()
+    }
+  })
+</script>
+</body>
+</html>

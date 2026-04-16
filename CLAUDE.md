@@ -24,6 +24,7 @@ configs/ — per-klant JSON (bedrijfsnaam, diensten, openingstijden, tools)
 - beheer-leads.js / genereer-reactivatie.js — lead reactivation
 - beheer-afspraken.js — afspraken CRUD (GET/POST/PATCH/DELETE)
 - generate-report.js — AI rapport generatie op basis van bestellingen
+- _utils.js — gedeelde helpers: ok/fail/parseBody/requireFields/asyncHandler/withTimeout/logUsage/berekenKosten/PRIJZEN
 - debug-rag.js — RAG debugging hulp
 - hallo.js — test function
 
@@ -31,10 +32,13 @@ configs/ — per-klant JSON (bedrijfsnaam, diensten, openingstijden, tools)
 index.html (chat), scanner.html, dashboard.html, kennisbank.html, leads.html, report-dashboard.html, afspraken-dashboard.html
 
 ### Supabase tabellen
-- bestellingen — bestellingen via tool use
-- documenten — RAG kennisbank (full-text search, zoek_vector)
-- leads — lead reactivation met status tracking
-- afspraken — afspraken via plan_afspraak tool (klant, naam_klant, telefoon, dienst, datum, tijd, status)
+Project: zkrsbyxmyedtnyhhmpyx
+
+- bestellingen (RLS aan) — bestellingen via tool use
+- documenten (RLS aan) — RAG kennisbank (full-text search, zoek_vector)
+- leads (RLS aan) — lead reactivation met status tracking
+- afspraken (UNRESTRICTED, hardening TODO) — afspraken via plan_afspraak tool (klant, naam_klant, telefoon, dienst, datum, tijd, status)
+- api_usage (UNRESTRICTED, hardening TODO) — Claude API gebruik per call (klant, function_naam, model, tokens, kosten_eur)
 
 ### MCP
 - Supabase MCP gekoppeld via https://mcp.supabase.com/mcp
@@ -58,3 +62,24 @@ index.html (chat), scanner.html, dashboard.html, kennisbank.html, leads.html, re
 - netlify deploy --prod vanuit projectroot
 - Env vars op Netlify: ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY
 - Live URL: mkb-chatbot.netlify.app (momenteel gepauzeerd — billing cycle reset 17 april)
+
+## Cowork Skills
+
+De volgende skills zijn beschikbaar in Claude Cowork voor niet-code taken:
+
+### klant-onboarding
+Trigger: "onboard nieuwe klant [naam] [type] [locatie]"
+Genereert: klanten/[naam]/ met pitch email, config-voorstel, onboarding checklist
+Leest: PRODUCT.md, PITCH-EMAIL.md
+
+### product-development
+Trigger: "nieuw product [naam]", "bouw [naam]", "plan product [naam]", "start project [naam]"
+Genereert: producten/[naam]/ met PRD.md, CLAUDE.md, BUILDPLAN.md
+Stelt eerst 3-5 vragen, genereert daarna alle bestanden
+
+### Beschikbare pitch materialen
+- PRODUCT.md — volledige productbeschrijving met modules en prijzen
+- PITCH-EMAIL.md — email template voor klantbenadering
+- ONE-PAGER.md — printbare samenvatting met pakketten
+- CASE-STUDY.md — fictieve case study Café De Hoek
+- PITCH-HARUN.md — gepersonaliseerde pitch Damdorp Barbershop

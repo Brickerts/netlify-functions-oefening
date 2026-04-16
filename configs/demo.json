@@ -11,5 +11,9 @@
     "bestelling": true,
     "reservering": false,
     "contact": true
+  },
+  "limieten": {
+    "max_calls_per_maand": 1000,
+    "max_kosten_eur_per_maand": 5.00
   }
 }

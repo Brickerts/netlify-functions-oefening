@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kosten Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg:       '#0d1219',
+            surface:  '#1a2332',
+            surface2: '#232f42',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background: #0d1219; }
+    .card { background: #1a2332; border-radius: 12px; }
+    select option { background: #1a2332; }
+    .progress-bar { background: #232f42; border-radius: 4px; height: 6px; }
+    .progress-fill { background: #3b82f6; border-radius: 4px; height: 6px; transition: width .4s; }
+  </style>
+</head>
+<body class="text-slate-200 min-h-screen font-sans">
+
+  <!-- Header -->
+  <header class="max-w-5xl mx-auto px-5 py-6 border-b border-slate-700 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <h1 class="text-xl font-bold tracking-tight">Kosten Dashboard</h1>
+      <p class="text-sm text-slate-400 mt-1">Claude API kosten per klant en functie</p>
+    </div>
+    <div class="flex items-center gap-4 flex-wrap">
+      <div class="flex items-center gap-2">
+        <label for="periode" class="text-sm text-slate-400">Periode:</label>
+        <select id="periode" class="bg-surface2 border border-slate-600 rounded-lg text-sm px-3 py-2 text-slate-200 outline-none focus:border-blue-500" style="background:#232f42">
+          <option value="week">Week</option>
+          <option value="maand" selected>Deze maand</option>
+          <option value="alles">Alles</option>
+        </select>
+      </div>
+      <div class="flex items-center gap-2 text-xs text-slate-500">
+        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse inline-block"></span>
+        <span id="laatste-update">Laden…</span>
+      </div>
+      <div class="flex gap-3">
+        <a href="index.html" class="text-xs text-blue-400 hover:underline">Chatbot</a>
+        <a href="dashboard.html" class="text-xs text-blue-400 hover:underline">Bestellingen</a>
+        <a href="afspraken-dashboard.html" class="text-xs text-blue-400 hover:underline">Afspraken</a>
+        <a href="report-dashboard.html" class="text-xs text-blue-400 hover:underline">Rapporten</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-5 py-6 flex flex-col gap-6">
+
+    <!-- Loading / Error -->
+    <div id="loading" class="text-center py-16 text-slate-400 flex items-center justify-center gap-3">
+      <svg class="animate-spin w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+      </svg>
+      Statistieken ophalen…
+    </div>
+    <div id="fout" class="hidden bg-red-900/20 border border-red-500/30 rounded-xl p-4 text-red-300 text-sm"></div>
+
+    <!-- KPI cards -->
+    <div id="kpi" class="hidden grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+
+    <!-- Grafiek -->
+    <div id="grafiek-wrapper" class="hidden card p-5">
+      <h2 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wide">Kosten per dag</h2>
+      <canvas id="dagGrafiek" height="100"></canvas>
+    </div>
+
+    <!-- Tabellen -->
+    <div id="tabellen" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4">
+
+      <!-- Per klant -->
+      <div class="card p-5">
+        <h2 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wide">Per klant</h2>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs text-slate-500 uppercase">
+              <th class="text-left pb-2">Klant</th>
+              <th class="text-right pb-2">Calls</th>
+              <th class="text-right pb-2">Kosten</th>
+              <th class="w-20 pb-2"></th>
+            </tr>
+          </thead>
+          <tbody id="tabel-klant"></tbody>
+        </table>
+      </div>
+
+      <!-- Per function -->
+      <div class="card p-5">
+        <h2 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wide">Per functie</h2>
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs text-slate-500 uppercase">
+              <th class="text-left pb-2">Functie</th>
+              <th class="text-right pb-2">Calls</th>
+              <th class="text-right pb-2">Kosten</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-function"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Laatste 10 calls -->
+    <div id="recente-wrapper" class="hidden card p-5">
+      <h2 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wide">Laatste 10 calls</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-xs text-slate-500 uppercase">
+              <th class="text-left pb-2 pr-4">Tijd</th>
+              <th class="text-left pb-2 pr-4">Klant</th>
+              <th class="text-left pb-2 pr-4">Functie</th>
+              <th class="text-left pb-2 pr-4">Model</th>
+              <th class="text-right pb-2">Kosten</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-recent"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+<script>
+  let chart = null
+
+  const periodeSelect = document.getElementById('periode')
+  periodeSelect.addEventListener('change', () => laadStats(periodeSelect.value))
+
+  function eur(n) {
+    return '€' + (n || 0).toFixed(4)
+  }
+
+  function datumNl(iso) {
+    if (!iso) return '—'
+    return new Date(iso).toLocaleString('nl-NL', {
+      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+    })
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+
+  function toonFout(tekst) {
+    document.getElementById('loading').classList.add('hidden')
+    const el = document.getElementById('fout')
+    el.textContent = tekst
+    el.classList.remove('hidden')
+  }
+
+  function renderKPI(data) {
+    const gemiddeld = data.totaal_calls > 0
+      ? data.totaal_kosten_eur / data.totaal_calls
+      : 0
+    const aantalKlanten = data.per_klant.length
+
+    document.getElementById('kpi').innerHTML = `
+      ${kpiCard('Totaal calls', data.totaal_calls)}
+      ${kpiCard('Totaal kosten', eur(data.totaal_kosten_eur))}
+      ${kpiCard('Klanten', aantalKlanten)}
+      ${kpiCard('Gem. per call', eur(gemiddeld))}
+    `
+  }
+
+  function kpiCard(label, waarde) {
+    return `
+      <div class="card p-4">
+        <div class="text-xs text-slate-500 uppercase tracking-wide">${label}</div>
+        <div class="text-2xl font-bold mt-1">${waarde}</div>
+      </div>`
+  }
+
+  function renderGrafiek(per_dag) {
+    const labels = per_dag.map(d => d.datum)
+    const values = per_dag.map(d => d.kosten_eur)
+
+    if (chart) chart.destroy()
+
+    chart = new Chart(document.getElementById('dagGrafiek'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Kosten (€)',
+          data: values,
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.1)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#3b82f6',
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ' ' + eur(ctx.parsed.y)
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#64748b', font: { size: 11 } },
+            grid:  { color: '#232f42' }
+          },
+          y: {
+            ticks: {
+              color: '#64748b',
+              font: { size: 11 },
+              callback: v => eur(v)
+            },
+            grid: { color: '#232f42' }
+          }
+        }
+      }
+    })
+  }
+
+  function renderTabelKlant(per_klant) {
+    document.getElementById('tabel-klant').innerHTML = per_klant.map(k => `
+      <tr class="border-t border-slate-700/50">
+        <td class="py-2 pr-3 text-slate-200">${esc(k.klant)}</td>
+        <td class="py-2 pr-3 text-right text-slate-400">${k.calls}</td>
+        <td class="py-2 pr-3 text-right text-blue-300">${eur(k.kosten_eur)}</td>
+        <td class="py-2">
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${k.percentage}%"></div>
+          </div>
+          <div class="text-xs text-slate-500 text-right mt-1">${k.percentage}%</div>
+        </td>
+      </tr>`).join('') || '<tr><td colspan="4" class="py-4 text-slate-500 text-center">Geen data</td></tr>'
+  }
+
+  function renderTabelFunction(per_function) {
+    document.getElementById('tabel-function').innerHTML = per_function.map(f => `
+      <tr class="border-t border-slate-700/50">
+        <td class="py-2 pr-3 text-slate-200 font-mono text-xs">${esc(f.function_naam)}</td>
+        <td class="py-2 pr-3 text-right text-slate-400">${f.calls}</td>
+        <td class="py-2 text-right text-blue-300">${eur(f.kosten_eur)}</td>
+      </tr>`).join('') || '<tr><td colspan="3" class="py-4 text-slate-500 text-center">Geen data</td></tr>'
+  }
+
+  function renderRecent(laatste_10) {
+    document.getElementById('tabel-recent').innerHTML = laatste_10.map(r => `
+      <tr class="border-t border-slate-700/50">
+        <td class="py-2 pr-4 text-slate-400 whitespace-nowrap">${datumNl(r.created_at)}</td>
+        <td class="py-2 pr-4 text-slate-200">${esc(r.klant)}</td>
+        <td class="py-2 pr-4 font-mono text-xs text-slate-300">${esc(r.function_naam)}</td>
+        <td class="py-2 pr-4 font-mono text-xs text-slate-400">${esc(r.model?.replace('claude-', ''))}</td>
+        <td class="py-2 text-right text-blue-300">${eur(r.kosten_eur)}</td>
+      </tr>`).join('') || '<tr><td colspan="5" class="py-4 text-slate-500 text-center">Geen data</td></tr>'
+  }
+
+  async function laadStats(periode = 'maand') {
+    // Reset state
+    document.getElementById('fout').classList.add('hidden')
+    document.getElementById('loading').classList.remove('hidden')
+    document.getElementById('kpi').classList.add('hidden')
+    document.getElementById('grafiek-wrapper').classList.add('hidden')
+    document.getElementById('tabellen').classList.add('hidden')
+    document.getElementById('recente-wrapper').classList.add('hidden')
+
+    try {
+      const res = await fetch(`/.netlify/functions/kosten-stats?periode=${periode}`)
+      const data = await res.json()
+
+      if (data.error) { toonFout(data.error); return }
+
+      document.getElementById('loading').classList.add('hidden')
+
+      renderKPI(data)
+      renderGrafiek(data.per_dag)
+      renderTabelKlant(data.per_klant)
+      renderTabelFunction(data.per_function)
+      renderRecent(data.laatste_10)
+
+      document.getElementById('kpi').classList.remove('hidden')
+      document.getElementById('grafiek-wrapper').classList.remove('hidden')
+      document.getElementById('tabellen').classList.remove('hidden')
+      document.getElementById('recente-wrapper').classList.remove('hidden')
+
+      document.getElementById('laatste-update').textContent =
+        'Bijgewerkt om ' + new Date().toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+
+    } catch (e) {
+      toonFout('Verbindingsfout: ' + e.message)
+    }
+  }
+
+  laadStats(periodeSelect.value)
+</script>
+</body>
+</html>

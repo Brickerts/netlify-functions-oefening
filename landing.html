@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MKB AI Platform — Brickerts</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1219;
+      --bg2:       #101820;
+      --surface:   #1a2332;
+      --surface2:  #232f42;
+      --border:    #2a3a52;
+      --accent:    #3b82f6;
+      --accent2:   #60a5fa;
+      --text:      #e2e8f0;
+      --text-muted:#8899b0;
+      --radius:    16px;
+      --max:       1100px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(13,18,25,.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: -.3px;
+      color: var(--text);
+    }
+
+    .nav-logo span { color: var(--accent); }
+
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      font-size: .85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #fff !important;
+      padding: 7px 18px;
+      border-radius: 8px;
+      font-size: .85rem !important;
+      font-weight: 600 !important;
+      transition: background .2s !important;
+    }
+    .nav-cta:hover { background: #2563eb !important; }
+
+    /* ── HAMBURGER ── */
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      z-index: 101;
+    }
+    .hamburger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: transform .2s, opacity .2s;
+    }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+    .nav-mobile {
+      display: none;
+      position: fixed;
+      top: 60px;
+      left: 0; right: 0;
+      background: rgba(13,18,25,.97);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px 24px;
+      flex-direction: column;
+      gap: 4px;
+      z-index: 99;
+    }
+    .nav-mobile.open { display: flex; }
+    .nav-mobile a {
+      font-size: .95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      transition: color .2s;
+    }
+    .nav-mobile a:last-child { border-bottom: none; }
+    .nav-mobile a:hover { color: var(--text); }
+    .nav-mobile .nav-cta {
+      text-align: center;
+      padding: 13px;
+      margin-top: 8px;
+      border-bottom: none;
+      border-radius: 10px;
+    }
+
+    @media (max-width: 768px) {
+      .hamburger { display: flex; }
+      .nav-links { display: none; }
+    }
+
+    /* ── SECTIONS ── */
+    section { width: 100%; padding: 100px 24px; }
+    .container { max-width: var(--max); margin: 0 auto; }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding-top: 120px;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(59,130,246,.18) 0%, transparent 70%),
+        var(--bg);
+    }
+
+    .hero-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 28px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(59,130,246,.12);
+      border: 1px solid rgba(59,130,246,.25);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: .78rem;
+      font-weight: 600;
+      color: var(--accent2);
+      letter-spacing: .4px;
+      text-transform: uppercase;
+    }
+
+    .hero-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: puls 2s ease-in-out infinite;
+    }
+
+    @keyframes puls { 0%,100%{opacity:.4} 50%{opacity:1} }
+
+    .hero-title {
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -.5px;
+      line-height: 1.1;
+      max-width: 700px;
+    }
+
+    .hero-title .highlight {
+      background: linear-gradient(135deg, #3b82f6, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 520px;
+      line-height: 1.7;
+    }
+
+    .hero-btns {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      padding: 13px 28px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: .95rem;
+      transition: background .2s, transform .15s;
+      display: inline-block;
+    }
+    .btn-primary:hover { background: #2563eb; transform: translateY(-1px); }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      padding: 13px 28px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: .95rem;
+      border: 1px solid var(--border);
+      transition: background .2s, transform .15s;
+      display: inline-block;
+    }
+    .btn-secondary:hover { background: var(--surface2); transform: translateY(-1px); }
+
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 12px;
+    }
+
+    .hero-stat { text-align: center; }
+    .hero-stat-num { font-size: 1.6rem; font-weight: 800; color: var(--accent2); }
+    .hero-stat-label { font-size: .78rem; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── SECTION HEADER ── */
+    .section-header { text-align: center; margin-bottom: 56px; }
+    .section-tag {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: -.3px;
+      line-height: 1.2;
+    }
+    .section-sub {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin-top: 12px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ── MODULES ── */
+    #modules { background: var(--bg2); }
+
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .module-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color .2s, transform .2s;
+    }
+    .module-card:hover {
+      border-color: rgba(59,130,246,.4);
+      transform: translateY(-3px);
+    }
+
+    .module-icon {
+      width: 44px; height: 44px;
+      background: rgba(59,130,246,.12);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+    }
+
+    .module-title {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .module-desc {
+      font-size: .88rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .module-link {
+      font-size: .83rem;
+      color: var(--accent);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: gap .15s;
+    }
+    .module-link:hover { gap: 8px; }
+
+    /* ── HOE WERKT HET ── */
+    #hoe { background: var(--bg); }
+
+    .stappen {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0;
+      position: relative;
+    }
+
+    .stappen::before {
+      content: '';
+      position: absolute;
+      top: 28px;
+      left: calc(12.5% + 20px);
+      right: calc(12.5% + 20px);
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), var(--border), transparent);
+    }
+
+    @media (max-width: 700px) { .stappen::before { display: none; } }
+
+    .stap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 0 20px;
+      gap: 14px;
+      position: relative;
+    }
+
+    .stap-num {
+      width: 56px; height: 56px;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--accent2);
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+    }
+
+    .stap-title {
+      font-weight: 700;
+      font-size: .95rem;
+    }
+
+    .stap-desc {
+      font-size: .83rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── PAKKETTEN ── */
+    #pakketten { background: var(--bg2); }
+
+    .pakket-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+
+    .pakket {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      position: relative;
+    }
+
+    .pakket.populair {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, #1a2332, #1e2d45);
+    }
+
+    .populair-badge {
+      position: absolute;
+      top: -13px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+
+    .pakket-naam {
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .pakket-prijs {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .pakket-prijs-combo {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .pakket-prijs-combo .prijs-mnd {
+      font-size: 1.5rem;
+      font-weight: 800;
+    }
+
+    .pakket-prijs-combo .prijs-mnd-label {
+      font-size: .85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    .pakket-prijs-combo .prijs-setup {
+      display: block;
+      font-size: .82rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .pakket-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .pakket-features li {
+      font-size: .88rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pakket-features li::before {
+      content: '✓';
+      color: var(--accent);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .pakket .btn-primary,
+    .pakket .btn-secondary {
+      text-align: center;
+      width: 100%;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      padding: 48px 24px;
+    }
+
+    .footer-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      text-align: center;
+    }
+
+    .footer-logo {
+      font-weight: 800;
+      font-size: 1.1rem;
+    }
+    .footer-logo span { color: var(--accent); }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .footer-links a {
+      font-size: .85rem;
+      color: var(--text-muted);
+      transition: color .2s;
+    }
+    .footer-links a:hover { color: var(--text); }
+
+    .footer-copy {
+      font-size: .78rem;
+      color: var(--text-muted);
+    }
+
+    /* ── FADE-IN ANIMATIES ── */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity .55s ease, transform .55s ease;
+    }
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .fade-up-delay-1 { transition-delay: .1s; }
+    .fade-up-delay-2 { transition-delay: .2s; }
+    .fade-up-delay-3 { transition-delay: .3s; }
+    .fade-up-delay-4 { transition-delay: .4s; }
+    .fade-up-delay-5 { transition-delay: .5s; }
+
+    /* ── DIVIDER ── */
+    .divider {
+      width: 40px; height: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">MKB<span>AI</span></div>
+  <div class="nav-links">
+    <a href="#modules">Modules</a>
+    <a href="#hoe">Werkwijze</a>
+    <a href="#pakketten">Pakketten</a>
+    <a href="portfolio.html">Portfolio</a>
+    <a href="index.html" class="nav-cta">Probeer demo</a>
+  </div>
+  <button class="hamburger" id="hamburger" aria-label="Menu openen">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- MOBIEL MENU -->
+<div class="nav-mobile" id="nav-mobile">
+  <a href="#modules" onclick="sluitMenu()">Modules</a>
+  <a href="#hoe" onclick="sluitMenu()">Werkwijze</a>
+  <a href="#pakketten" onclick="sluitMenu()">Pakketten</a>
+  <a href="portfolio.html">Portfolio</a>
+  <a href="index.html" class="nav-cta">Probeer demo</a>
+</div>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-badge">Gebouwd op Claude AI · Anthropic</div>
+      <h1 class="hero-title">
+        MKB AI Platform<br>
+        <span class="highlight">Slimme automatisering</span><br>
+        voor jouw bedrijf
+      </h1>
+      <p class="hero-sub">
+        Chatbot, document scanner, kennisbank en meer — volledig ingesteld op jouw bedrijf. Klaar in dagen, niet maanden.
+      </p>
+      <div class="hero-btns">
+        <a href="index.html" class="btn-primary">Probeer de demo</a>
+        <a href="#modules" class="btn-secondary">Bekijk modules</a>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-num">6</div>
+          <div class="hero-stat-label">Modules</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">24/7</div>
+          <div class="hero-stat-label">Beschikbaar</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">100%</div>
+          <div class="hero-stat-label">Nederlands</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-num">&lt;48u</div>
+          <div class="hero-stat-label">Live</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MODULES -->
+<section id="modules">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-tag">Modules</div>
+      <h2 class="section-title">Alles wat je nodig hebt</h2>
+      <p class="section-sub">Kies de modules die bij jouw bedrijf passen. Alles werkt samen.</p>
+      <div class="divider" style="margin-top:20px"></div>
+    </div>
+    <div class="modules-grid">
+      <div class="module-card fade-up fade-up-delay-1">
+        <div class="module-icon">💬</div>
+        <div class="module-title">AI Chatbot</div>
+        <p class="module-desc">Beantwoordt klantvragen, neemt bestellingen op en plant afspraken in — afgestemd op jouw openingstijden en diensten.</p>
+        <a href="index.html" class="module-link">Bekijk demo →</a>
+      </div>
+      <div class="module-card fade-up fade-up-delay-2">
+        <div class="module-icon">📄</div>
+        <div class="module-title">Document Scanner</div>
+        <p class="module-desc">Upload een factuur of bon en de AI leest automatisch alle gegevens uit. Geen handmatig overtypen meer.</p>
+        <a href="scanner.html" class="module-link">Bekijk demo →</a>
+      </div>
+      <div class="module-card fade-up fade-up-delay-3">
+        <div class="module-icon">🧠</div>
+        <div class="module-title">Kennisbank</div>
+        <p class="module-desc">Chatbot die antwoordt op basis van jouw eigen documenten, menu en FAQ. Klanten krijgen altijd het juiste antwoord.</p>
+        <a href="kennisbank.html" class="module-link">Bekijk demo →</a>
+      </div>
+      <div class="module-card fade-up fade-up-delay-1">
+        <div class="module-icon">🔁</div>
+        <div class="module-title">Lead Reactivatie</div>
+        <p class="module-desc">Identificeert slapende klanten en genereert gepersonaliseerde berichten om ze terug te winnen.</p>
+        <a href="leads.html" class="module-link">Bekijk demo →</a>
+      </div>
+      <div class="module-card fade-up fade-up-delay-2">
+        <div class="module-icon">📊</div>
+        <div class="module-title">Rapportages</div>
+        <p class="module-desc">AI-gegenereerde zakelijke rapportages met piekuren, populairste producten en concrete aanbevelingen.</p>
+        <a href="report-dashboard.html" class="module-link">Bekijk demo →</a>
+      </div>
+      <div class="module-card fade-up fade-up-delay-3">
+        <div class="module-icon">💶</div>
+        <div class="module-title">Kosten Dashboard</div>
+        <p class="module-desc">Realtime inzicht in wat de AI kost per klant en per functie. Maandelijkse limieten instelbaar.</p>
+        <a href="kosten-dashboard.html" class="module-link">Bekijk demo →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOE WERKT HET -->
+<section id="hoe">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-tag">Werkwijze</div>
+      <h2 class="section-title">Van gesprek tot live in 4 stappen</h2>
+      <div class="divider" style="margin-top:20px"></div>
+    </div>
+    <div class="stappen">
+      <div class="stap fade-up fade-up-delay-1">
+        <div class="stap-num">1</div>
+        <div class="stap-title">Kennismaking</div>
+        <p class="stap-desc">We bespreken wat je nodig hebt en welke modules het beste passen bij jouw bedrijf.</p>
+      </div>
+      <div class="stap fade-up fade-up-delay-2">
+        <div class="stap-num">2</div>
+        <div class="stap-title">Configuratie</div>
+        <p class="stap-desc">We stellen het platform in op jouw bedrijf: naam, openingstijden, menu en diensten.</p>
+      </div>
+      <div class="stap fade-up fade-up-delay-3">
+        <div class="stap-num">3</div>
+        <div class="stap-title">Testen</div>
+        <p class="stap-desc">Samen testen we of alles werkt zoals verwacht. Aanpassingen worden direct doorgevoerd.</p>
+      </div>
+      <div class="stap fade-up fade-up-delay-4">
+        <div class="stap-num">4</div>
+        <div class="stap-title">Live</div>
+        <p class="stap-desc">De chatbot staat op je website, dashboards beschikbaar. Daarna maandelijks onderhoud en support.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PAKKETTEN -->
+<section id="pakketten">
+  <div class="container">
+    <div class="section-header fade-up">
+      <div class="section-tag">Pakketten</div>
+      <h2 class="section-title">Transparante prijzen</h2>
+      <p class="section-sub">Eenmalige setup, daarna een vast maandbedrag. Geen verrassingen.</p>
+      <div class="divider" style="margin-top:20px"></div>
+    </div>
+    <div class="pakket-grid">
+
+      <div class="pakket fade-up fade-up-delay-1">
+        <div class="pakket-naam">Starter</div>
+        <div class="pakket-prijs">
+          <div class="pakket-prijs-combo">
+            <span class="prijs-mnd">€99</span><span class="prijs-mnd-label"> / mnd</span>
+            <span class="prijs-setup">€750 eenmalig · daarna dit maandbedrag</span>
+          </div>
+        </div>
+        <ul class="pakket-features">
+          <li>AI Chatbot op maat</li>
+          <li>Kennisbank (FAQ & documenten)</li>
+          <li>Nederlands, 24/7 beschikbaar</li>
+          <li>Maandelijks onderhoud</li>
+          <li>E-mail support</li>
+        </ul>
+        <!-- WhatsApp: zakelijk nummer volgt -->
+        <a href="mailto:ricksieders@gmail.com" class="btn-secondary">Stuur een bericht</a>
+      </div>
+
+      <div class="pakket populair fade-up fade-up-delay-2">
+        <div class="populair-badge">Populair</div>
+        <div class="pakket-naam">Groei</div>
+        <div class="pakket-prijs">
+          <div class="pakket-prijs-combo">
+            <span class="prijs-mnd">€199</span><span class="prijs-mnd-label"> / mnd</span>
+            <span class="prijs-setup">€1.500 eenmalig · daarna dit maandbedrag</span>
+          </div>
+        </div>
+        <ul class="pakket-features">
+          <li>Alles uit Starter</li>
+          <li>Document Scanner</li>
+          <li>Lead Reactivatie</li>
+          <li>Afspraken inplannen via chatbot</li>
+          <li>Kosten Dashboard</li>
+          <li>Prioriteit support</li>
+        </ul>
+        <!-- WhatsApp: zakelijk nummer volgt -->
+        <a href="mailto:ricksieders@gmail.com" class="btn-primary">Stuur een bericht</a>
+      </div>
+
+      <div class="pakket fade-up fade-up-delay-3">
+        <div class="pakket-naam">Compleet</div>
+        <div class="pakket-prijs">
+          <div class="pakket-prijs-combo">
+            <span class="prijs-mnd">€349</span><span class="prijs-mnd-label"> / mnd</span>
+            <span class="prijs-setup">€2.750 eenmalig · daarna dit maandbedrag</span>
+          </div>
+        </div>
+        <ul class="pakket-features">
+          <li>Alle 6 modules</li>
+          <li>AI Rapportages & Dashboard</li>
+          <li>Meerdere locaties / klanten</li>
+          <li>Maatwerk op aanvraag</li>
+          <li>Dedicated support</li>
+          <li>Kwartaalgesprek & advies</li>
+        </ul>
+        <!-- WhatsApp: zakelijk nummer volgt -->
+        <a href="mailto:ricksieders@gmail.com" class="btn-secondary">Stuur een bericht</a>
+      </div>
+
+    </div>
+    <p style="text-align:center;font-size:.82rem;color:var(--text-muted);margin-top:32px">
+      Prijzen zijn richtprijzen en afhankelijk van de complexiteit en wensen. Inclusief hosting, onderhoud en support.
+    </p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">MKB<span>AI</span> — Brickerts</div>
+    <div class="footer-links">
+      <a href="mailto:ricksieders@gmail.com">ricksieders@gmail.com</a>
+      <a href="https://github.com/Brickerts" target="_blank">github.com/Brickerts</a>
+      <a href="https://chatrick.nl" target="_blank">chatrick.nl</a>
+    </div>
+    <div class="footer-copy">© 2026 Brickerts · Rick Sieders</div>
+  </div>
+</footer>
+
+<script>
+  // Intersection Observer — fade-in bij scrollen
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible')
+        observer.unobserve(entry.target)
+      }
+    })
+  }, { threshold: 0.12 })
+
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el))
+
+  // Hamburger menu
+  const hamburger = document.getElementById('hamburger')
+  const navMobile = document.getElementById('nav-mobile')
+
+  hamburger.addEventListener('click', () => {
+    const isOpen = navMobile.classList.toggle('open')
+    hamburger.classList.toggle('open', isOpen)
+    hamburger.setAttribute('aria-label', isOpen ? 'Menu sluiten' : 'Menu openen')
+  })
+
+  function sluitMenu() {
+    navMobile.classList.remove('open')
+    hamburger.classList.remove('open')
+    hamburger.setAttribute('aria-label', 'Menu openen')
+  }
+
+  // Sluit menu bij klik buiten nav
+  document.addEventListener('click', (e) => {
+    if (!hamburger.contains(e.target) && !navMobile.contains(e.target)) {
+      sluitMenu()
+    }
+  })
+</script>
+</body>
+</html>

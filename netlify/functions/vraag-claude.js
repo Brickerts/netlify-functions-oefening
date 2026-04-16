@@ -1,5 +1,6 @@
 require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env'), override: true });
 const { createClient } = require('@supabase/supabase-js')
+const { ok, fail, parseBody, requireFields, withTimeout, asyncHandler, logUsage, checkRateLimit } = require('./_utils')
 
 const CONFIG_MAP = {
   demo:   require('../../configs/demo.json'),
@@ -16,6 +17,17 @@ const TOOL_LABELS = {
   reservering: 'reserveringen maken',
   contact: 'contactformulier invullen',
   afspraak: 'afspraken inplannen'
+}
+
+function huidigeDatumTijd() {
+  const nu = new Date()
+  const dagen   = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag']
+  const maanden = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december']
+  const dag   = dagen[nu.getDay()]
+  const maand = maanden[nu.getMonth()]
+  const uur   = String(nu.getHours()).padStart(2, '0')
+  const min   = String(nu.getMinutes()).padStart(2, '0')
+  return `Vandaag is ${dag} ${nu.getDate()} ${maand} ${nu.getFullYear()}, ${uur}:${min}.`
 }
 
 function bouwSystemPrompt(config, contextChunks) {
@@ -36,18 +48,24 @@ function bouwSystemPrompt(config, contextChunks) {
     ? `\nDe volgende functies zijn UITGESCHAKELD en mag je NOOIT aanbieden, ook niet als de klant erom vraagt:\n${uitgeschakeld}\nAls een klant vraagt naar een uitgeschakelde functie, zeg dan dat dit niet beschikbaar is via de chat.\n`
     : ''
 
+  const afspraakBlok = config.afspraak_instructie
+    ? `\n${config.afspraak_instructie}\n`
+    : ''
+
   const contextBlok = contextChunks?.length
     ? `\nRelevante bedrijfsinformatie:\n${contextChunks.map(c => `---\n${c.content}`).join('\n')}\n---\nBaseer je antwoord op de verstrekte bedrijfsinformatie. Als de informatie het antwoord niet bevat, zeg dat je het niet weet.\n`
     : ''
 
-  return `Je bent een vriendelijke assistent voor ${config.bedrijfsnaam}, een ${config.type} bedrijf. ${config.beschrijving} Je helpt klanten met vragen en bestellingen. Spreek altijd Nederlands.
+  return `${huidigeDatumTijd()}
+
+Je bent een vriendelijke assistent voor ${config.bedrijfsnaam}, een ${config.type} bedrijf. ${config.beschrijving} Je helpt klanten met vragen en bestellingen. Spreek altijd Nederlands.
 
 Dit zijn de EXACTE openingstijden, gebruik deze letterlijk en verzin nooit andere tijden:
 ${tijden}
 
 Noem ALLEEN de volgende diensten, verzin nooit andere diensten:
 ${diensten}
-${uitgeschakeldBlok}${contextBlok}`
+${uitgeschakeldBlok}${afspraakBlok}${contextBlok}`
 }
 
 function bouwTools(config) {
@@ -77,17 +95,22 @@ function bouwTools(config) {
   if (config.tools.afspraak) {
     tools.push({
       name: 'plan_afspraak',
-      description: 'Gebruik dit wanneer een klant een afspraak wil maken. Verzamel naam, telefoonnummer, gewenste dienst, datum en tijd.',
+      description: 'Gebruik dit wanneer een klant een afspraak wil maken. Verzamel naam, telefoonnummer, gewenste diensten (één of meerdere), datum en tijd.',
       input_schema: {
         type: 'object',
         properties: {
           naam_klant: { type: 'string', description: 'Volledige naam van de klant' },
           telefoon:   { type: 'string', description: 'Telefoonnummer van de klant' },
-          dienst:     { type: 'string', description: 'Gewenste dienst, bijv. heren knipbeurt, baard trimmen' },
+          diensten:   {
+            type: 'array',
+            items: { type: 'string' },
+            minItems: 1,
+            description: 'Lijst van gewenste diensten, bijv. ["knippen heren", "baard trimmen"]'
+          },
           datum:      { type: 'string', description: 'Datum in YYYY-MM-DD formaat' },
           tijd:       { type: 'string', description: 'Tijd in HH:MM formaat' }
         },
-        required: ['naam_klant', 'dienst', 'datum', 'tijd']
+        required: ['naam_klant', 'diensten', 'datum', 'tijd']
       }
     })
   }
@@ -146,145 +169,130 @@ async function haalContext(klant, vraag) {
   }
 }
 
-exports.handler = async (event) => {
-  try {
-    const key = process.env.ANTHROPIC_API_KEY || ''
-    console.log('[DEBUG] ANTHROPIC_API_KEY eerste 10 tekens:', key.slice(0, 10) || '(leeg!)')
+exports.handler = asyncHandler(async (event) => {
+  const body = parseBody(event)
+  requireFields(body, ['geschiedenis', 'klant'])
+  const { geschiedenis, klant } = body
 
-    const { geschiedenis, klant } = JSON.parse(event.body)
+  const config = laadConfig(klant)
+  if (!config) return fail(`Onbekende klant: ${klant}`, 400)
 
-    const config = laadConfig(klant)
-    if (!config) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ fout: `Onbekende klant: ${klant}` })
-      }
-    }
+  const limit = await checkRateLimit(klant, config.limieten)
+  if (!limit.allowed) {
+    return ok({
+      antwoord: 'Sorry, ik heb mijn maandelijkse limiet bereikt. Neem contact op met de eigenaar van deze chatbot of probeer het volgende maand opnieuw.',
+      rate_limited: true
+    })
+  }
 
-    // Haal RAG-context op op basis van de laatste user-vraag
-    const laasteVraag = [...geschiedenis].reverse().find(m => m.role === 'user')?.content || ''
-    const contextChunks = await haalContext(config.bedrijfsnaam, laasteVraag)
+  // Haal RAG-context op op basis van de laatste user-vraag
+  const laasteVraag = [...geschiedenis].reverse().find(m => m.role === 'user')?.content || ''
+  const contextChunks = await haalContext(config.bedrijfsnaam, laasteVraag)
 
-    const tools = bouwTools(config)
+  const tools = bouwTools(config)
 
-    const requestBody = {
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
-      system: bouwSystemPrompt(config, contextChunks),
-      messages: geschiedenis,
-      ...(tools.length > 0 ? { tools } : {})
-    }
+  const requestBody = {
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 500,
+    system: bouwSystemPrompt(config, contextChunks),
+    messages: geschiedenis,
+    ...(tools.length > 0 ? { tools } : {})
+  }
 
-    const response = await fetch(API_URL, {
+  const response = await withTimeout(fetch(API_URL, {
+    method: 'POST',
+    headers: apiHeaders(),
+    body: JSON.stringify(requestBody)
+  }), 30000)
+
+  const data = await response.json()
+  if (!data.content) return fail(data.error?.message || 'Claude API fout')
+
+  await logUsage({ klant, function_naam: 'vraag-claude', model: 'claude-haiku-4-5-20251001', usage: data.usage })
+
+  const toolBlock = data.content.find(b => b.type === 'tool_use')
+
+  if (toolBlock?.name === 'plan_afspraak') {
+    const { naam_klant, telefoon, diensten, datum, tijd } = toolBlock.input
+    const dienstOmschrijving = diensten.join(', ')
+
+    fetch(`${process.env.URL}/.netlify/functions/beheer-afspraken`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ klant, naam_klant, telefoon, dienst: dienstOmschrijving, datum, tijd })
+    }).catch(() => {})
+
+    const bevestiging = `Afspraak ingepland: ${naam_klant} voor ${dienstOmschrijving} op ${datum} om ${tijd}`
+
+    const res2 = await withTimeout(fetch(API_URL, {
       method: 'POST',
       headers: apiHeaders(),
-      body: JSON.stringify(requestBody)
-    })
-
-    const data = await response.json()
-
-    if (!data.content) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ fout: data.error?.message })
-      }
-    }
-
-    const toolBlock = data.content.find(b => b.type === 'tool_use')
-
-    if (toolBlock?.name === 'plan_afspraak') {
-      const { naam_klant, telefoon, dienst, datum, tijd } = toolBlock.input
-
-      fetch(`${process.env.URL}/.netlify/functions/beheer-afspraken`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ klant, naam_klant, telefoon, dienst, datum, tijd })
-      }).catch(() => {})
-
-      const bevestiging = `Afspraak ingepland: ${naam_klant} voor ${dienst} op ${datum} om ${tijd}`
-
-      const res2 = await fetch(API_URL, {
-        method: 'POST',
-        headers: apiHeaders(),
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 500,
-          system: bouwSystemPrompt(config, contextChunks),
-          tools,
-          messages: [
-            ...geschiedenis,
-            { role: 'assistant', content: data.content },
-            {
-              role: 'user',
-              content: [{
-                type: 'tool_result',
-                tool_use_id: toolBlock.id,
-                content: bevestiging
-              }]
-            }
-          ]
-        })
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system: bouwSystemPrompt(config, contextChunks),
+        tools,
+        messages: [
+          ...geschiedenis,
+          { role: 'assistant', content: data.content },
+          {
+            role: 'user',
+            content: [{
+              type: 'tool_result',
+              tool_use_id: toolBlock.id,
+              content: bevestiging
+            }]
+          }
+        ]
       })
+    }), 30000)
 
-      const data2 = await res2.json()
-      const tekst = data2.content?.find(b => b.type === 'text')?.text || 'Afspraak ingepland.'
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ antwoord: tekst, afspraak: { naam_klant, telefoon, dienst, datum, tijd } })
-      }
-    }
-
-    if (toolBlock?.name === 'plaas_bestelling') {
-      const { items, aantal } = toolBlock.input
-      const omschrijving = items.map((item, i) => `${aantal[i]}x ${item}`).join(', ')
-
-      // Sla bestelling op in Supabase (fire-and-forget, fout blokkeert niet)
-      fetch(`${process.env.URL}/.netlify/functions/sla-bestelling-op`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ klant, items, aantal })
-      }).catch(() => {})
-
-      const res2 = await fetch(API_URL, {
-        method: 'POST',
-        headers: apiHeaders(),
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 500,
-          system: bouwSystemPrompt(config, contextChunks),
-          tools,
-          messages: [
-            ...geschiedenis,
-            { role: 'assistant', content: data.content },
-            {
-              role: 'user',
-              content: [{
-                type: 'tool_result',
-                tool_use_id: toolBlock.id,
-                content: `Bestelling succesvol geplaatst: ${omschrijving}`
-              }]
-            }
-          ]
-        })
-      })
-
-      const data2 = await res2.json()
-      const tekst = data2.content?.find(b => b.type === 'text')?.text || 'Bestelling verwerkt.'
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ antwoord: tekst, bestelling: { items, aantal } })
-      }
-    }
-
-    const tekst = data.content.find(b => b.type === 'text')?.text || ''
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ antwoord: tekst })
-    }
-  } catch (err) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ fout: err.message })
-    }
+    const data2 = await res2.json()
+    await logUsage({ klant, function_naam: 'vraag-claude', model: 'claude-haiku-4-5-20251001', usage: data2.usage })
+    const tekst = data2.content?.find(b => b.type === 'text')?.text || 'Afspraak ingepland.'
+    return ok({ antwoord: tekst, afspraak: { naam_klant, telefoon, diensten, datum, tijd } })
   }
-}
+
+  if (toolBlock?.name === 'plaas_bestelling') {
+    const { items, aantal } = toolBlock.input
+    const omschrijving = items.map((item, i) => `${aantal[i]}x ${item}`).join(', ')
+
+    // Sla bestelling op in Supabase (fire-and-forget, fout blokkeert niet)
+    fetch(`${process.env.URL}/.netlify/functions/sla-bestelling-op`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ klant, items, aantal })
+    }).catch(() => {})
+
+    const res2 = await withTimeout(fetch(API_URL, {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 500,
+        system: bouwSystemPrompt(config, contextChunks),
+        tools,
+        messages: [
+          ...geschiedenis,
+          { role: 'assistant', content: data.content },
+          {
+            role: 'user',
+            content: [{
+              type: 'tool_result',
+              tool_use_id: toolBlock.id,
+              content: `Bestelling succesvol geplaatst: ${omschrijving}`
+            }]
+          }
+        ]
+      })
+    }), 30000)
+
+    const data2 = await res2.json()
+    await logUsage({ klant, function_naam: 'vraag-claude', model: 'claude-haiku-4-5-20251001', usage: data2.usage })
+    const tekst = data2.content?.find(b => b.type === 'text')?.text || 'Bestelling verwerkt.'
+    return ok({ antwoord: tekst, bestelling: { items, aantal } })
+  }
+
+  const tekst = data.content.find(b => b.type === 'text')?.text || ''
+  return ok({ antwoord: tekst })
+})

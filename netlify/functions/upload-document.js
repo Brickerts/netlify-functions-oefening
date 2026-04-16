@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js')
+const { ok, fail, parseBody, requireFields, asyncHandler } = require('./_utils')
 
 const CHUNK_WOORDEN  = 500
 const OVERLAP_WOORDEN = 50
@@ -22,37 +23,23 @@ function maakChunks(tekst) {
   return chunks
 }
 
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ fout: 'Method not allowed' }) }
-  }
+exports.handler = asyncHandler(async (event) => {
+  if (event.httpMethod !== 'POST') return fail('Method not allowed', 405)
 
-  try {
-    const { klant, titel, content } = JSON.parse(event.body)
+  const body = parseBody(event)
+  requireFields(body, ['klant', 'titel', 'content'])
+  const { klant, titel, content } = body
 
-    if (!klant || !titel || !content) {
-      return { statusCode: 400, body: JSON.stringify({ fout: 'klant, titel en content zijn verplicht' }) }
-    }
+  const chunks = maakChunks(content)
+  const rijen  = chunks.map((chunk, i) => ({
+    klant,
+    titel:   chunks.length > 1 ? `${titel} (deel ${i + 1}/${chunks.length})` : titel,
+    content: chunk
+    // zoek_vector wordt automatisch gevuld door de database trigger
+  }))
 
-    const chunks = maakChunks(content)
-    const rijen  = chunks.map((chunk, i) => ({
-      klant,
-      titel:   chunks.length > 1 ? `${titel} (deel ${i + 1}/${chunks.length})` : titel,
-      content: chunk
-      // zoek_vector wordt automatisch gevuld door de database trigger
-    }))
+  const { error } = await supabase().from('documenten').insert(rijen)
+  if (error) return fail(error.message)
 
-    const { error } = await supabase().from('documenten').insert(rijen)
-    if (error) {
-      return { statusCode: 500, body: JSON.stringify({ fout: error.message }) }
-    }
-
-    return {
-      statusCode: 200,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ opgeslagen: rijen.length, chunks: chunks.length })
-    }
-  } catch (err) {
-    return { statusCode: 500, body: JSON.stringify({ fout: err.message }) }
-  }
-}
+  return ok({ opgeslagen: rijen.length, chunks: chunks.length })
+})

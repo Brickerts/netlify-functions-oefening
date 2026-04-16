@@ -8,10 +8,15 @@
     "zo-ma": "gesloten"
   },
   "diensten": ["knippen heren", "knippen dames", "baard trimmen", "kinderen knippen"],
+  "afspraak_instructie": "Een klant mag meerdere diensten combineren in één afspraak, bijv. knippen én baard trimmen.",
   "tools": {
     "bestelling": false,
     "reservering": false,
     "contact": true,
     "afspraak": true
+  },
+  "limieten": {
+    "max_calls_per_maand": 1000,
+    "max_kosten_eur_per_maand": 5.00
   }
 }

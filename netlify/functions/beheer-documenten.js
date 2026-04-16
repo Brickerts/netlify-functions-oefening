@@ -1,53 +1,38 @@
 const { createClient } = require('@supabase/supabase-js')
+const { ok, fail, parseBody, requireFields, asyncHandler } = require('./_utils')
 
 function supabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY)
 }
 
-exports.handler = async (event) => {
+exports.handler = asyncHandler(async (event) => {
   // ── GET: documenten lijst ophalen ────────────────────────────────────────
   if (event.httpMethod === 'GET') {
-    try {
-      const klant = event.queryStringParameters?.klant || null
+    const klant = event.queryStringParameters?.klant || null
 
-      let query = supabase()
-        .from('documenten')
-        .select('id, klant, titel, created_at')
-        .order('created_at', { ascending: false })
+    let query = supabase()
+      .from('documenten')
+      .select('id, klant, titel, created_at')
+      .order('created_at', { ascending: false })
 
-      if (klant) query = query.eq('klant', klant)
+    if (klant) query = query.eq('klant', klant)
 
-      const { data, error } = await query
-      if (error) return { statusCode: 500, body: JSON.stringify({ fout: error.message }) }
+    const { data, error } = await query
+    if (error) return fail(error.message)
 
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documenten: data })
-      }
-    } catch (err) {
-      return { statusCode: 500, body: JSON.stringify({ fout: err.message }) }
-    }
+    return ok({ documenten: data })
   }
 
   // ── DELETE: document verwijderen ─────────────────────────────────────────
   if (event.httpMethod === 'DELETE') {
-    try {
-      const { id } = JSON.parse(event.body)
-      if (!id) return { statusCode: 400, body: JSON.stringify({ fout: 'id is verplicht' }) }
+    const body = parseBody(event)
+    requireFields(body, ['id'])
 
-      const { error } = await supabase().from('documenten').delete().eq('id', id)
-      if (error) return { statusCode: 500, body: JSON.stringify({ fout: error.message }) }
+    const { error } = await supabase().from('documenten').delete().eq('id', body.id)
+    if (error) return fail(error.message)
 
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verwijderd: true })
-      }
-    } catch (err) {
-      return { statusCode: 500, body: JSON.stringify({ fout: err.message }) }
-    }
+    return ok({ verwijderd: true })
   }
 
-  return { statusCode: 405, body: JSON.stringify({ fout: 'Method not allowed' }) }
-}
+  return fail('Method not allowed', 405)
+})

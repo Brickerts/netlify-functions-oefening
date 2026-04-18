@@ -1,3 +1,21 @@
+# Sessie geheugen
+
+Lees aan het begin van elke sessie deze vier bestanden:
+- memory/user.md — wie Rick is
+- memory/people.md — klanten en contacten
+- memory/decisions.md — technische en zakelijke beslissingen
+- memory/preferences.md — hoe Rick wil samenwerken
+
+Update de relevante bestanden zodra je iets nieuws leert over:
+- Een nieuwe klant of contact → people.md
+- Een architectuurbeslissing of afgesproken aanpak → decisions.md
+- Een voorkeur of werkwijze die Rick aangeeft → preferences.md
+- Persoonlijke info over Rick → user.md
+
+Schrijf alleen wat niet al afleidbaar is uit de code of git history.
+
+---
+
 # MKB Chatbot Platform
 
 ## Project

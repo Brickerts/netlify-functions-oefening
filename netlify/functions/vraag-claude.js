@@ -118,12 +118,18 @@ function bouwTools(config) {
 }
 
 const API_URL = 'https://api.anthropic.com/v1/messages'
+const MODEL   = 'claude-haiku-4-5-20251001'
+
+function cachedSystem(config, contextChunks) {
+  return [{ type: 'text', text: bouwSystemPrompt(config, contextChunks), cache_control: { type: 'ephemeral' } }]
+}
 
 function apiHeaders() {
   return {
     'Content-Type': 'application/json',
     'x-api-key': process.env.ANTHROPIC_API_KEY,
-    'anthropic-version': '2023-06-01'
+    'anthropic-version': '2023-06-01',
+    'anthropic-beta': 'prompt-caching-2024-07-31'
   }
 }
 
@@ -192,9 +198,9 @@ exports.handler = asyncHandler(async (event) => {
   const tools = bouwTools(config)
 
   const requestBody = {
-    model: 'claude-haiku-4-5-20251001',
+    model: MODEL,
     max_tokens: 500,
-    system: bouwSystemPrompt(config, contextChunks),
+    system: cachedSystem(config, contextChunks),
     messages: geschiedenis,
     ...(tools.length > 0 ? { tools } : {})
   }
@@ -208,7 +214,7 @@ exports.handler = asyncHandler(async (event) => {
   const data = await response.json()
   if (!data.content) return fail(data.error?.message || 'Claude API fout')
 
-  await logUsage({ klant, function_naam: 'vraag-claude', model: 'claude-haiku-4-5-20251001', usage: data.usage })
+  await logUsage({ klant, function_naam: 'vraag-claude', model: MODEL, usage: data.usage })
 
   const toolBlock = data.content.find(b => b.type === 'tool_use')
 
@@ -228,9 +234,9 @@ exports.handler = asyncHandler(async (event) => {
       method: 'POST',
       headers: apiHeaders(),
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: MODEL,
         max_tokens: 500,
-        system: bouwSystemPrompt(config, contextChunks),
+        system: cachedSystem(config, contextChunks),
         tools,
         messages: [
           ...geschiedenis,
@@ -248,7 +254,7 @@ exports.handler = asyncHandler(async (event) => {
     }), 30000)
 
     const data2 = await res2.json()
-    await logUsage({ klant, function_naam: 'vraag-claude', model: 'claude-haiku-4-5-20251001', usage: data2.usage })
+    await logUsage({ klant, function_naam: 'vraag-claude', model: MODEL, usage: data2.usage })
     const tekst = data2.content?.find(b => b.type === 'text')?.text || 'Afspraak ingepland.'
     return ok({ antwoord: tekst, afspraak: { naam_klant, telefoon, diensten, datum, tijd } })
   }
@@ -268,9 +274,9 @@ exports.handler = asyncHandler(async (event) => {
       method: 'POST',
       headers: apiHeaders(),
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: MODEL,
         max_tokens: 500,
-        system: bouwSystemPrompt(config, contextChunks),
+        system: cachedSystem(config, contextChunks),
         tools,
         messages: [
           ...geschiedenis,
@@ -288,7 +294,7 @@ exports.handler = asyncHandler(async (event) => {
     }), 30000)
 
     const data2 = await res2.json()
-    await logUsage({ klant, function_naam: 'vraag-claude', model: 'claude-haiku-4-5-20251001', usage: data2.usage })
+    await logUsage({ klant, function_naam: 'vraag-claude', model: MODEL, usage: data2.usage })
     const tekst = data2.content?.find(b => b.type === 'text')?.text || 'Bestelling verwerkt.'
     return ok({ antwoord: tekst, bestelling: { items, aantal } })
   }
